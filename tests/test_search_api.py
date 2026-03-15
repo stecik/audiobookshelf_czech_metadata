@@ -67,6 +67,25 @@ def test_source_specific_search_endpoint_returns_matches_with_dependency_overrid
     }
 
 
+def test_palmknihy_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["palmknihy"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/palmknihy/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
 def test_source_specific_health_endpoint_returns_ok() -> None:
     app = create_app()
 

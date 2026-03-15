@@ -29,7 +29,10 @@ provider_service_dependencies = {
     "albatrosmedia": make_provider_service_dependency("provider_service_albatrosmedia"),
     "audiolibrix": make_provider_service_dependency("provider_service_audiolibrix"),
     "audioteka": make_provider_service_dependency("provider_service_audioteka"),
+    "kosmas": make_provider_service_dependency("provider_service_kosmas"),
     "onehotbook": make_provider_service_dependency("provider_service_onehotbook"),
+    "palmknihy": make_provider_service_dependency("provider_service_palmknihy"),
+    "progresguru": make_provider_service_dependency("provider_service_progresguru"),
 }
 
 

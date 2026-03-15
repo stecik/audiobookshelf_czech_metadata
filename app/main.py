@@ -17,10 +17,13 @@ from app.routers.search import (
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.services.provider import MetadataProviderService
 from app.services.scrapers.albatrosmedia import AlbatrosMediaScraper
+from app.services.scrapers.kosmas import KosmasScraper
 from app.services.scrapers.audioteka import AudiotekaScraper
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
 from app.services.scrapers.base import BaseMetadataScraper
 from app.services.scrapers.onehotbook import OneHotBookScraper
+from app.services.scrapers.palmknihy import PalmknihyScraper
+from app.services.scrapers.progresguru import ProgresGuruScraper
 from app.utils.logging import configure_logging
 
 
@@ -36,8 +39,14 @@ def build_scrapers(*, settings: Settings, http_client: HttpClient) -> dict[str, 
         scrapers["audiolibrix"] = AudiolibrixScraper(http_client=http_client)
     if settings.enable_audioteka:
         scrapers["audioteka"] = AudiotekaScraper(http_client=http_client)
+    if settings.enable_kosmas:
+        scrapers["kosmas"] = KosmasScraper(http_client=http_client)
     if settings.enable_onehotbook:
         scrapers["onehotbook"] = OneHotBookScraper(http_client=http_client)
+    if settings.enable_palmknihy:
+        scrapers["palmknihy"] = PalmknihyScraper(http_client=http_client)
+    if settings.enable_progresguru:
+        scrapers["progresguru"] = ProgresGuruScraper(http_client=http_client)
 
     return scrapers
 

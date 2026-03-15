@@ -1,6 +1,6 @@
 # Development
 
-This document covers local development, project structure, tests, and implementation details for `audiolibrix_scraper`.
+This document covers local development, project structure, tests, and implementation details.
 
 For deployment and Audiobookshelf setup, see [README.md](README.md).
 
@@ -16,6 +16,7 @@ app/
   services/scrapers/base.py
   services/scrapers/audioteka.py
   services/scrapers/audiolibrix.py
+  services/scrapers/kosmas.py
   services/normalizers/audiobookshelf.py
   clients/http.py
   utils/text.py
@@ -78,6 +79,7 @@ Current source strategies:
 
 - Audiolibrix: `https://www.audiolibrix.com/cs/Search/Results?query=...`
 - Audioteka: `https://audioteka.com/cz/vyhledavani/?phrase=...`
+- Kosmas: `https://www.kosmas.cz/audioknihy/?sortBy=relevance&query=...`
 
 ## API Examples
 
