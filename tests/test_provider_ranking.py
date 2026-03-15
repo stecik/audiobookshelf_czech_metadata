@@ -156,6 +156,29 @@ def test_filter_book_results_prefers_author_matched_prefixed_title_over_wrong_ex
     assert [book.source_id for book in filtered] == ["2"]
 
 
+def test_filter_book_results_treats_hyphenated_and_compact_titles_as_equivalent() -> None:
+    wrong_same_author = make_book(
+        source_id="1",
+        title="Vznešený dům",
+        authors=["James Clavell"],
+        language="cs",
+    )
+    correct_hyphenated = make_book(
+        source_id="2",
+        title="Tchaj-pan",
+        authors=["James Clavell"],
+        language="cs",
+    )
+
+    filtered = filter_book_results(
+        [wrong_same_author, correct_hyphenated],
+        query="Tchajpan",
+        author="James Clavell",
+    )
+
+    assert [book.source_id for book in filtered] == ["2"]
+
+
 class StaticScraper(BaseMetadataScraper):
     def __init__(self, source_name: str, books: list[SourceBook]) -> None:
         self.source_name = source_name

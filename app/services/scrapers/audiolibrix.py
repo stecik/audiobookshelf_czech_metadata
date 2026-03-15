@@ -227,7 +227,15 @@ class AudiolibrixScraper(BaseMetadataScraper):
         return match.group("book_id")
 
     def _texts(self, nodes: list[Node]) -> list[str]:
-        return unique_preserving_order(self._text(node) for node in nodes)
+        values: list[str | None] = []
+        for node in nodes:
+            href = normalize_whitespace(node.attributes.get("href"))
+            if href and href.startswith("#"):
+                continue
+            if normalize_whitespace(node.attributes.get("data-toggle")) == "collapse":
+                continue
+            values.append(self._text(node))
+        return unique_preserving_order(values)
 
     def _text(self, node: Node | None) -> str | None:
         if node is None:

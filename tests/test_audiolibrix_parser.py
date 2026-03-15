@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.models import SourceBook
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
 
 
@@ -47,3 +48,47 @@ def test_parse_detail_page_fixture_extracts_enriched_metadata() -> None:
     assert enriched.genres == ["Klasika"]
     assert enriched.description is not None
     assert "Nové vydanie románu 1984" in enriched.description
+
+
+def test_parse_detail_page_excludes_collapsed_narrator_toggle_label() -> None:
+    html = """
+    <html>
+      <body>
+        <h1 itemprop="name">Audiokniha Zapomenutá vražda</h1>
+        <dl class="alx-metadata">
+          <dt>Interpreti:</dt>
+          <dd>
+            <a href="/cs/Directory/Narrator/25/ruzena-merunkova">Růžena Merunková</a>,
+            <a href="/cs/Directory/Narrator/587/jitka-jezkova">Jitka Ježková</a>,
+            <a class="d-block small alx-collapse-exit" data-toggle="collapse" href="#more-narrators">další interpreti (1)</a>
+            <div id="more-narrators" class="collapse">
+              <a href="/cs/Directory/Narrator/1879/jan-meduna">Jan Meduna</a>
+            </div>
+          </dd>
+          <dt>Vydavatel:</dt>
+          <dd><a href="/cs/Directory/Publisher/42/vysehrad">Vyšehrad</a></dd>
+          <dt>Žánr:</dt>
+          <dd><a href="/cs/Directory/Books/4/detektivky">Detektivky</a></dd>
+          <dt>Jazyk:</dt>
+          <dd>čeština</dd>
+          <dt>Délka:</dt>
+          <dd>6h 8m</dd>
+        </dl>
+        <article class="card">
+          <h2 class="card-title">Anotace</h2>
+          <div class="card-body">Ukázková anotace.</div>
+        </article>
+      </body>
+    </html>
+    """
+    partial = SourceBook(
+        source="audiolibrix",
+        source_id="5456",
+        title="Zapomenutá vražda",
+        detail_url="https://www.audiolibrix.com/cs/Directory/Book/5456/Audiokniha-Zapomenuta-vrazda-Agatha-Christie",
+        authors=["Agatha Christie"],
+    )
+
+    enriched = build_scraper().parse_detail_page(html, partial=partial)
+
+    assert enriched.narrators == ["Růžena Merunková", "Jitka Ježková", "Jan Meduna"]

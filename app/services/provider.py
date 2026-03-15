@@ -52,11 +52,13 @@ class BookMatchSignals:
 def score_book_result(book: SourceBook, *, query: str, author: str | None = None) -> float:
     normalized_query = normalize_match_text(query)
     normalized_title = normalize_match_text(book.title)
+    compact_query = _compact_match_text(normalized_query)
+    compact_title = _compact_match_text(normalized_title)
 
     score = 0.0
-    if normalized_title == normalized_query:
+    if _texts_equivalent(normalized_title, normalized_query):
         score += 100.0
-    elif normalized_query and normalized_query in normalized_title:
+    elif _text_contains(normalized_title, normalized_query) or _text_contains(compact_title, compact_query):
         score += 65.0
     else:
         query_tokens = _split_match_tokens(normalized_query)
@@ -89,6 +91,8 @@ def score_candidate(book: SourceBook, *, query: str, author: str | None = None) 
 def build_book_match_signals(book: SourceBook, *, query: str, author: str | None = None) -> BookMatchSignals:
     normalized_query = normalize_match_text(query)
     normalized_title = normalize_match_text(book.title)
+    compact_query = _compact_match_text(normalized_query)
+    compact_title = _compact_match_text(normalized_title)
     query_tokens = _split_match_tokens(normalized_query)
     title_tokens = _split_match_tokens(normalized_title)
 
@@ -107,9 +111,15 @@ def build_book_match_signals(book: SourceBook, *, query: str, author: str | None
     return BookMatchSignals(
         book=book,
         score=score_book_result(book, query=query, author=author),
-        title_exact=bool(normalized_query) and normalized_title == normalized_query,
-        title_contains_query=bool(normalized_query) and normalized_query in normalized_title,
-        query_contains_title=bool(normalized_title) and normalized_title in normalized_query,
+        title_exact=_texts_equivalent(normalized_title, normalized_query),
+        title_contains_query=(
+            _text_contains(normalized_title, normalized_query)
+            or _text_contains(compact_title, compact_query)
+        ),
+        query_contains_title=(
+            _text_contains(normalized_query, normalized_title)
+            or _text_contains(compact_query, compact_title)
+        ),
         title_token_coverage=_token_coverage(query_tokens, title_tokens),
         author_match=author_match,
     )
@@ -168,6 +178,18 @@ def sort_book_results(books: Sequence[SourceBook], *, query: str, author: str | 
 
 def _split_match_tokens(value: str) -> list[str]:
     return [token for token in value.split(" ") if token]
+
+
+def _compact_match_text(value: str) -> str:
+    return value.replace(" ", "")
+
+
+def _texts_equivalent(left: str, right: str) -> bool:
+    return bool(left) and bool(right) and (left == right or _compact_match_text(left) == _compact_match_text(right))
+
+
+def _text_contains(container: str, candidate: str) -> bool:
+    return bool(container) and bool(candidate) and candidate in container
 
 
 def _token_overlap_count(query_tokens: Sequence[str], candidate_tokens: Sequence[str]) -> int:
