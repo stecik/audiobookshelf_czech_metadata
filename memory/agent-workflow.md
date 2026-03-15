@@ -9,3 +9,4 @@
 
 - Use `selectolax` instead of Beautiful Soup for HTML parsing.
 - Prefer an Audiolibrix internal API if a stable one is discovered later; otherwise keep the current HTML parsing path.
+- Keep result filtering strict when an exact normalized title match exists: prefer exact-title matches, then use author as a narrowing signal before allowing broader score-based fallbacks.

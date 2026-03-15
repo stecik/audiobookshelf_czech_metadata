@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from app.clients.http import UpstreamFetchError
 from app.models import SearchResponse, SourceBook
@@ -11,10 +12,41 @@ from app.utils.text import normalize_match_text
 
 
 logger = logging.getLogger(__name__)
+MINIMUM_RELEVANCE_SCORE = 60.0
+RELEVANCE_SCORE_WINDOW = 20.0
+MINIMUM_TITLE_TOKEN_COVERAGE = 0.5
 
 
 class UpstreamUnavailableError(Exception):
     """Raised when the upstream source cannot be reached."""
+
+
+@dataclass(frozen=True)
+class BookMatchSignals:
+    book: SourceBook
+    score: float
+    title_exact: bool
+    title_contains_query: bool
+    query_contains_title: bool
+    title_token_coverage: float
+    author_match: bool
+
+    @property
+    def title_is_strong(self) -> bool:
+        return (
+            self.title_exact
+            or self.title_contains_query
+            or self.query_contains_title
+            or self.title_token_coverage >= 1.0
+        )
+
+    @property
+    def title_has_signal(self) -> bool:
+        return (
+            self.title_contains_query
+            or self.query_contains_title
+            or self.title_token_coverage >= MINIMUM_TITLE_TOKEN_COVERAGE
+        )
 
 
 def score_book_result(book: SourceBook, *, query: str, author: str | None = None) -> float:
@@ -27,9 +59,9 @@ def score_book_result(book: SourceBook, *, query: str, author: str | None = None
     elif normalized_query and normalized_query in normalized_title:
         score += 65.0
     else:
-        query_tokens = [token for token in normalized_query.split(" ") if token]
-        title_tokens = set(token for token in normalized_title.split(" ") if token)
-        overlap = len([token for token in query_tokens if token in title_tokens])
+        query_tokens = _split_match_tokens(normalized_query)
+        title_tokens = _split_match_tokens(normalized_title)
+        overlap = _token_overlap_count(query_tokens, title_tokens)
         score += overlap * 8.0
 
     if author:
@@ -54,6 +86,74 @@ def score_candidate(book: SourceBook, *, query: str, author: str | None = None) 
     return score_book_result(book, query=query, author=author)
 
 
+def build_book_match_signals(book: SourceBook, *, query: str, author: str | None = None) -> BookMatchSignals:
+    normalized_query = normalize_match_text(query)
+    normalized_title = normalize_match_text(book.title)
+    query_tokens = _split_match_tokens(normalized_query)
+    title_tokens = _split_match_tokens(normalized_title)
+
+    author_match = False
+    if author:
+        normalized_author = normalize_match_text(author)
+        normalized_authors = normalize_match_text(" ".join(book.authors))
+        author_tokens = _split_match_tokens(normalized_author)
+        candidate_author_tokens = _split_match_tokens(normalized_authors)
+        author_match = bool(normalized_author) and (
+            normalized_authors == normalized_author
+            or normalized_author in normalized_authors
+            or _token_coverage(author_tokens, candidate_author_tokens) >= 1.0
+        )
+
+    return BookMatchSignals(
+        book=book,
+        score=score_book_result(book, query=query, author=author),
+        title_exact=bool(normalized_query) and normalized_title == normalized_query,
+        title_contains_query=bool(normalized_query) and normalized_query in normalized_title,
+        query_contains_title=bool(normalized_title) and normalized_title in normalized_query,
+        title_token_coverage=_token_coverage(query_tokens, title_tokens),
+        author_match=author_match,
+    )
+
+
+def filter_book_results(books: Sequence[SourceBook], *, query: str, author: str | None = None) -> list[SourceBook]:
+    if not books:
+        return []
+
+    signals = [build_book_match_signals(book, query=query, author=author) for book in books]
+
+    exact_title_matches = [signal.book for signal in signals if signal.title_exact]
+    if exact_title_matches:
+        exact_title_author_matches = [
+            signal.book for signal in signals if signal.title_exact and signal.author_match
+        ]
+        if exact_title_author_matches:
+            return exact_title_author_matches
+        return exact_title_matches
+
+    strong_title_author_matches = [
+        signal.book for signal in signals if signal.author_match and signal.title_is_strong
+    ]
+    if strong_title_author_matches:
+        return strong_title_author_matches
+
+    best_score = max(signal.score for signal in signals)
+    score_cutoff = max(MINIMUM_RELEVANCE_SCORE, best_score - RELEVANCE_SCORE_WINDOW)
+
+    filtered_by_score = [
+        signal.book
+        for signal in signals
+        if signal.score >= score_cutoff and signal.title_has_signal
+    ]
+    if filtered_by_score:
+        return filtered_by_score
+
+    fallback_matches = [signal.book for signal in signals if signal.title_has_signal]
+    if fallback_matches:
+        return fallback_matches
+
+    return list(books)
+
+
 def sort_book_results(books: Sequence[SourceBook], *, query: str, author: str | None = None) -> list[SourceBook]:
     return sorted(
         books,
@@ -64,6 +164,22 @@ def sort_book_results(books: Sequence[SourceBook], *, query: str, author: str | 
         ),
         reverse=True,
     )
+
+
+def _split_match_tokens(value: str) -> list[str]:
+    return [token for token in value.split(" ") if token]
+
+
+def _token_overlap_count(query_tokens: Sequence[str], candidate_tokens: Sequence[str]) -> int:
+    candidate_token_set = {token for token in candidate_tokens if token}
+    return len([token for token in query_tokens if token in candidate_token_set])
+
+
+def _token_coverage(query_tokens: Sequence[str], candidate_tokens: Sequence[str]) -> float:
+    if not query_tokens:
+        return 0.0
+    overlap = _token_overlap_count(query_tokens, candidate_tokens)
+    return overlap / len(query_tokens)
 
 
 class MetadataProviderService:
@@ -102,16 +218,18 @@ class MetadataProviderService:
             raise UpstreamUnavailableError("upstream source unavailable")
 
         ranked = sort_book_results(aggregated, query=query, author=author)
-        enriched = await self._enrich_top_results(ranked)
+        filtered = filter_book_results(ranked, query=query, author=author)
+        enriched = await self._enrich_top_results(filtered)
         deduplicated = self._deduplicate(enriched)
         sorted_results = sort_book_results(deduplicated, query=query, author=author)
+        filtered_results = filter_book_results(sorted_results, query=query, author=author)
 
         logger.info(
             "provider.search_complete",
-            extra={"query": query, "author_provided": bool(author), "matches": len(sorted_results)},
+            extra={"query": query, "author_provided": bool(author), "matches": len(filtered_results)},
         )
 
-        return self._normalizer.normalize_many(sorted_results)
+        return self._normalizer.normalize_many(filtered_results)
 
     async def _enrich_top_results(self, books: Sequence[SourceBook]) -> list[SourceBook]:
         enriched_books: list[SourceBook] = []
