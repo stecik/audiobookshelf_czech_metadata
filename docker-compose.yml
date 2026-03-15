@@ -1,0 +1,13 @@
+services:
+  provider:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_HOST: ${APP_HOST:-0.0.0.0}
+      APP_PORT: ${APP_PORT:-8000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-20}
+      AUDIOBOOKSHELF_AUTH_TOKEN: ${AUDIOBOOKSHELF_AUTH_TOKEN:-}
+      SCRAPER_USER_AGENT: ${SCRAPER_USER_AGENT:-}
+    restart: unless-stopped

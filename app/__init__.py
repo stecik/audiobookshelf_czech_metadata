@@ -1,0 +1,1 @@
+"""Audiolibrix Audiobookshelf metadata provider."""
