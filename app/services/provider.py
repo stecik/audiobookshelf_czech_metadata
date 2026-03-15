@@ -121,20 +121,20 @@ def filter_book_results(books: Sequence[SourceBook], *, query: str, author: str 
 
     signals = [build_book_match_signals(book, query=query, author=author) for book in books]
 
-    exact_title_matches = [signal.book for signal in signals if signal.title_exact]
-    if exact_title_matches:
+    strong_title_author_matches = [
+        signal.book for signal in signals if signal.author_match and signal.title_is_strong
+    ]
+    if strong_title_author_matches:
         exact_title_author_matches = [
             signal.book for signal in signals if signal.title_exact and signal.author_match
         ]
         if exact_title_author_matches:
             return exact_title_author_matches
-        return exact_title_matches
-
-    strong_title_author_matches = [
-        signal.book for signal in signals if signal.author_match and signal.title_is_strong
-    ]
-    if strong_title_author_matches:
         return strong_title_author_matches
+
+    exact_title_matches = [signal.book for signal in signals if signal.title_exact]
+    if exact_title_matches:
+        return exact_title_matches
 
     best_score = max(signal.score for signal in signals)
     score_cutoff = max(MINIMUM_RELEVANCE_SCORE, best_score - RELEVANCE_SCORE_WINDOW)

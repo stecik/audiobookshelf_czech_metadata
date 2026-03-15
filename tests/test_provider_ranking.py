@@ -127,6 +127,35 @@ def test_filter_book_results_uses_author_to_drop_same_query_noise_without_exact_
     assert [book.source_id for book in filtered] == ["1"]
 
 
+def test_filter_book_results_prefers_author_matched_prefixed_title_over_wrong_exact_title() -> None:
+    wrong_exact_title = make_book(
+        source_id="1",
+        title="Volný pád",
+        authors=["Ali Hazelwood"],
+        language="cs",
+    )
+    correct_prefixed_title = make_book(
+        source_id="2",
+        title="Jack Reacher: Volný pád",
+        authors=["Lee Child"],
+        language="cs",
+    )
+    same_author_noise = make_book(
+        source_id="3",
+        title="Jack Reacher: Zásah",
+        authors=["Lee Child"],
+        language="cs",
+    )
+
+    filtered = filter_book_results(
+        [wrong_exact_title, correct_prefixed_title, same_author_noise],
+        query="Volný pád",
+        author="Lee Child",
+    )
+
+    assert [book.source_id for book in filtered] == ["2"]
+
+
 class StaticScraper(BaseMetadataScraper):
     def __init__(self, source_name: str, books: list[SourceBook]) -> None:
         self.source_name = source_name
