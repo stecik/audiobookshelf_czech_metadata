@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.models import AudiobookshelfMatch, SearchResponse
-from app.routers.search import get_provider_service
+from app.routers.search import get_provider_service, provider_service_dependencies
 
 
 class StubProviderService:
@@ -48,6 +48,35 @@ def test_search_endpoint_returns_matches_with_dependency_override() -> None:
     }
 
 
+def test_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["audioteka"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/audioteka/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_source_specific_health_endpoint_returns_ok() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.get("/onehotbook/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_search_endpoint_requires_authorization_when_token_is_configured(monkeypatch) -> None:
     monkeypatch.setenv("AUDIOBOOKSHELF_AUTH_TOKEN", "shared-secret")
 
@@ -65,3 +94,14 @@ def test_search_endpoint_requires_authorization_when_token_is_configured(monkeyp
     assert unauthorized.status_code == 401
     assert unauthorized.json() == {"error": "unauthorized"}
     assert authorized.status_code == 200
+
+
+def test_disabled_source_endpoint_is_not_registered(monkeypatch) -> None:
+    monkeypatch.setenv("ENABLE_ONEHOTBOOK", "false")
+
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.get("/onehotbook/search", params={"query": "1984"})
+
+    assert response.status_code == 404

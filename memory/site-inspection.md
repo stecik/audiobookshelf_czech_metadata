@@ -58,3 +58,33 @@ Date: 2026-03-15
 
 - The site exposes stable public detail links and embedded structured payloads in HTML.
 - No separate public JSON search endpoint was required for v1 because the search page already returns the needed data in a static response.
+
+# OneHotBook Site Inspection
+
+Date: 2026-03-15
+
+## Confirmed search path
+
+- The public product search route resolves to `https://onehotbook.cz/search?q=...&type=product`.
+- Search results render server-side and include one product card per match.
+
+## Search result structure
+
+- Result cards render as `.product-grid-item`.
+- Each card includes a hidden `.quick_shop .json.hide` node containing Shopify product JSON.
+- The embedded product payload includes `id`, `title`, `handle`, `description`, `published_at`, `vendor`, `tags`, `featured_image`, and `images`.
+- Author, narrator, and genre values are encoded in product tags such as `Autor_*`, `Interpret_*`, and `Žánr_*`.
+
+## Detail page structure
+
+- Product detail pages expose explicit metadata in static HTML.
+- Title selector: `h1[itemprop="name"]`
+- Author and narrator blocks render under `#product-info .author`.
+- Description block selector: `.short-description`
+- Specification tab content includes `Délka nahrávky` and `Datum vydání`.
+- Example detail page for `1984` includes richer narrator data than the search payload, so detail enrichment is worthwhile for top-ranked matches.
+
+## Internal API check
+
+- Shopify predictive search is enabled on the storefront, but the public search page already returns the complete embedded product payload needed for reliable parsing.
+- A separate JSON search endpoint was not required for this implementation.

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 DEFAULT_USER_AGENT = (
     "audiolibrix-abs-provider/0.1.0 "
-    "(+https://www.audiolibrix.com/cs; https://audioteka.com/cz/)"
+    "(+https://www.audiolibrix.com/cs; https://audioteka.com/cz/; https://onehotbook.cz/)"
 )
 
 
@@ -19,6 +19,9 @@ class Settings(BaseModel):
     audiobookshelf_auth_token: str | None = None
     scraper_user_agent: str = DEFAULT_USER_AGENT
     detail_enrichment_limit: int = Field(default=5, ge=1, le=10)
+    enable_audiolibrix: bool = True
+    enable_audioteka: bool = True
+    enable_onehotbook: bool = True
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -42,4 +45,7 @@ class Settings(BaseModel):
             request_timeout_seconds=os.getenv("REQUEST_TIMEOUT_SECONDS", "20"),
             audiobookshelf_auth_token=os.getenv("AUDIOBOOKSHELF_AUTH_TOKEN"),
             scraper_user_agent=os.getenv("SCRAPER_USER_AGENT", DEFAULT_USER_AGENT),
+            enable_audiolibrix=os.getenv("ENABLE_AUDIOLIBRIX", "true"),
+            enable_audioteka=os.getenv("ENABLE_AUDIOTEKA", "true"),
+            enable_onehotbook=os.getenv("ENABLE_ONEHOTBOOK", "true"),
         )

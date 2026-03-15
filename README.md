@@ -1,14 +1,34 @@
-# Czech Metadata Provider
+# Czech Audiobook Metadata Provider
 
-FastAPI service that implements the Audiobookshelf custom metadata provider contract for two Czech audiobook storefronts:
+FastAPI service that implements the Audiobookshelf custom metadata provider contract for Czech audiobook storefronts:
 
 - [Audiolibrix Czech](https://www.audiolibrix.com/cs)
 - [Audioteka Czech](https://audioteka.com/cz/)
+- [OneHotBook](https://onehotbook.cz/)
+
+## To be added
+
+- <https://www.albatrosmedia.cz/edice/36467691/audioknihy/>
+- <https://progresguru.cz/audioknihy>
+- <https://www.kanopa.cz/?srsltid=AfmBOooE7C6n0UFleN04MZB8ro91guZpiepF4U6InyCRCkaRq-VtStmR>
+- <https://www.luxor.cz/c/10726/audioknihy>
+- <https://naposlech.cz/>
+- <https://www.megaknihy.cz/tema/1/32787-audioknihy?p=1>
+- <https://temata.rozhlas.cz/hry-a-cetba>
+- <https://www.radioteka.cz/?srsltid=AfmBOoqEj_Jk27x9zrrXBohlAbX-gbV1JE42Q3cVflU3Z9V9wYN_SvCq>
+- <https://www.o2knihovna.cz/audioknihy/>
+- <https://www.alza.cz/media/audioknihy/18854370.htm>
+- <https://www.knihydobrovsky.cz/audioknihy>
+- <https://www.palmknihy.cz/edice/audioknihy/audioknihy>
+- <https://www.kosmas.cz/audioknihy/>
 
 It exposes:
 
 - `GET /health`
 - `GET /search?query=...&author=...`
+- `GET /audiolibrix/health` and `GET /audiolibrix/search?...`
+- `GET /audioteka/health` and `GET /audioteka/search?...`
+- `GET /onehotbook/health` and `GET /onehotbook/search?...`
 
 Audiobookshelf 2.8.0+ can call external metadata providers over HTTP. This service searches configured sources, ranks matches, normalizes the result into the ABS `{"matches": [...]}` shape, and returns it to Audiobookshelf.
 
@@ -73,6 +93,8 @@ As of March 15, 2026:
 - Audiolibrix uses `https://www.audiolibrix.com/cs/Search/Results?query=...` and returns server-rendered result cards.
 - Audioteka uses `https://audioteka.com/cz/vyhledavani/?phrase=...` and returns server-rendered HTML with embedded search payloads.
 - Audioteka detail pages embed structured audiobook payloads plus referenced long descriptions, so no browser automation is required.
+- OneHotBook uses `https://onehotbook.cz/search?q=...&type=product` and returns server-rendered result cards with embedded Shopify product JSON.
+- OneHotBook detail pages expose richer narrator and specification metadata in static HTML, including duration and release date.
 
 ## Runtime Configuration
 
@@ -85,9 +107,16 @@ LOG_LEVEL=INFO
 REQUEST_TIMEOUT_SECONDS=20
 AUDIOBOOKSHELF_AUTH_TOKEN=
 SCRAPER_USER_AGENT=
+ENABLE_AUDIOLIBRIX=true
+ENABLE_AUDIOTEKA=true
+ENABLE_ONEHOTBOOK=true
 ```
 
 If `AUDIOBOOKSHELF_AUTH_TOKEN` is set, Audiobookshelf must send the same value in the `AUTHORIZATION` header. This provider also accepts `Bearer <token>`.
+
+All sources are enabled by default. Set any `ENABLE_*` flag to `false` to skip that storefront entirely.
+
+When a source is disabled, it is excluded from the global `/search` results and its source-specific endpoint is not registered.
 
 Optional shared-network override:
 
@@ -107,9 +136,14 @@ Audiobookshelf expects the provider base URL, not `/search`.
 
 - ABS running locally on the same machine as the provider: `http://localhost:8000`
 - ABS running in Docker on the same Docker network as the provider: `http://provider:8000`
+- Audiolibrix-only provider: `http://localhost:8000/audiolibrix`
+- Audioteka-only provider: `http://localhost:8000/audioteka`
+- OneHotBook-only provider: `http://localhost:8000/onehotbook`
 
 1. Leave `Hodnota autorizačního headeru` / Authorization Header Value blank unless `AUDIOBOOKSHELF_AUTH_TOKEN` is set.
 2. Save the provider and run a metadata search/refresh on a book or audiobook.
+
+If you want separate selectors in Audiobookshelf for each store, add multiple custom providers pointing at the source-specific base URLs above. ABS will call `/search` under whichever base URL you configure.
 
 ## Separate Compose Projects
 
@@ -174,6 +208,12 @@ Search:
 curl "http://localhost:8000/search?query=1984&author=George%20Orwell"
 ```
 
+Audioteka only:
+
+```bash
+curl "http://localhost:8000/audioteka/search?query=1984&author=George%20Orwell"
+```
+
 Search with auth:
 
 ```bash
@@ -205,9 +245,10 @@ Example response:
 
 ## Known Limitations
 
-- Only Audiolibrix Czech and Audioteka Czech are supported right now.
+- Audiolibrix Czech, Audioteka Czech, and OneHotBook are supported right now.
 - Audiolibrix still relies on HTML parsing because no stable full search JSON endpoint was identified.
 - Audioteka search and detail parsing relies on embedded Next.js payloads, so payload-shape changes may require updates.
+- OneHotBook search parsing relies on embedded Shopify product JSON inside server-rendered result cards, and detail enrichment relies on the current product/specification page layout.
 - Detail enrichment is limited to the top-ranked candidates to keep upstream traffic modest.
 
 ## Adding Another Source
