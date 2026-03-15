@@ -2,11 +2,12 @@
 
 ## Goal
 
-Build a **Python + FastAPI custom metadata provider** for **Audiobookshelf** that scrapes **Audiolibrix Czech storefront** starting with:
+Build a **Python + FastAPI custom metadata provider** for **Audiobookshelf** that scrapes Czech storefronts starting with:
 
 - `https://www.audiolibrix.com/cs`
+- `https://audioteka.com/cz/`
 
-The first version only needs to support this source, but the codebase must be structured so adding more sources later is straightforward.
+The codebase must keep source-specific logic isolated so adding more sources later is straightforward.
 
 ## Agent memory
 
@@ -34,7 +35,7 @@ The relevant API shape from the Audiobookshelf spec is:
 - No database.
 - No caching layer unless it is tiny and fileless.
 - No support for detail pages beyond what is needed to produce good metadata.
-- No support for every possible Audiobookshelf field if Audiolibrix does not expose it.
+- No support for every possible Audiobookshelf field if the sources do not expose it.
 
 ## Required stack
 
@@ -64,6 +65,7 @@ Use this exact or very similar layout:
 │  │  ├─ provider.py
 │  │  ├─ scrapers/
 │  │  │  ├─ base.py
+│  │  │  ├─ audioteka.py
 │  │  │  └─ audiolibrix.py
 │  │  └─ normalizers/
 │  │     └─ audiobookshelf.py
@@ -74,6 +76,7 @@ Use this exact or very similar layout:
 │     └─ logging.py
 ├─ tests/
 │  ├─ test_search_api.py
+│  ├─ test_audioteka_parser.py
 │  ├─ test_audiolibrix_parser.py
 │  └─ fixtures/
 ├─ Dockerfile
@@ -89,7 +92,7 @@ Use this exact or very similar layout:
 1. **Separate transport, scraping, and normalization.**
    - FastAPI route handles HTTP concerns.
    - Provider service orchestrates search.
-   - Source scraper knows how to fetch and parse Audiolibrix.
+   - Source scraper knows how to fetch and parse one storefront.
    - Normalizer maps source data into ABS response schema.
 
 2. **Design for multiple future sources.**
@@ -138,8 +141,8 @@ Inputs:
 
 Behavior:
 
-- Search Audiolibrix using `query` and optionally `author`
-- Parse result cards from the site
+- Search all configured sources using `query` and optionally `author`
+- Parse result listings from the site
 - If result cards do not contain enough metadata, optionally follow detail links for top matches only
 - Normalize into ABS `matches`
 - Return JSON matching the ABS spec
@@ -164,23 +167,28 @@ Example response shape:
 }
 ```
 
-## Search strategy for Audiolibrix
+## Search strategy for sources
 
-You must inspect the target site and implement the simplest reliable strategy.
+You must inspect each target site and implement the simplest reliable strategy.
 
 Preferred order:
 
-1. If Audiolibrix exposes a stable internal API for search results, prefer that.
-2. Otherwise find whether Audiolibrix has a query URL or search form usable with plain HTTP GET.
+1. If a source exposes a stable internal API for search results, prefer that.
+2. Otherwise find whether the site has a query URL or search form usable with plain HTTP GET.
 3. If the landing page includes links to search results or exposes query params, use those.
 4. If the site requires a search POST, implement it with `httpx`.
 5. If results are rendered client-side only, document that clearly and add a fallback strategy.
 
 Important:
 
-- Start from `https://www.audiolibrix.com/cs`, but do not hardcode the whole implementation around only one page template if you can avoid it.
+- Start from the storefront homepages, but do not hardcode the whole implementation around only one page template if you can avoid it.
 - Keep URL building isolated in the scraper.
 - Normalize relative URLs to absolute URLs.
+
+Current known entrypoints:
+
+- Audiolibrix: `https://www.audiolibrix.com/cs/Search/Results?query=...`
+- Audioteka: `https://audioteka.com/cz/vyhledavani/?phrase=...`
 
 ## Matching and ranking
 
@@ -348,7 +356,7 @@ Before finishing, ensure the generated project includes:
 
 ## Notes to the coding agent
 
-When implementing the scraper, actively inspect the live HTML structure of Audiolibrix and adapt selectors accordingly. If the site structure prevents reliable scraping with static requests, document the issue in the README and isolate any fallback path behind a clean abstraction rather than scattering special cases through the code.
+When implementing a scraper, actively inspect the live HTML structure or embedded payloads of the target source and adapt selectors accordingly. If the site structure prevents reliable scraping with static requests, document the issue in the README and isolate any fallback path behind a clean abstraction rather than scattering special cases through the code.
 
 ## Changelog, README and sematic versioning
 

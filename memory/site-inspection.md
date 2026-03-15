@@ -30,3 +30,31 @@ Date: 2026-03-15
 - The page exposes a `search-results-info` JSON script with counts only.
 - The live JS bundle did not reveal a stable internal JSON endpoint for full book result payloads.
 - Current implementation remains HTML-first with the scraper abstraction kept ready for a future API path.
+
+# Audioteka Site Inspection
+
+Date: 2026-03-15
+
+## Confirmed search path
+
+- The public search route resolves to `https://audioteka.com/cz/vyhledavani/?phrase=...`.
+- The frontend route manifest exposes `/cz/search/...`, which is localized to `/cz/vyhledavani/...`.
+- Combined title-and-author phrases still return useful results.
+
+## Search result structure
+
+- The response is server-rendered HTML from Next.js.
+- Search result data is embedded in the page's flight payload under an escaped `products` object.
+- Each product entry includes at least `id`, `name`, `image_url`, `description` (author string), and `slug`.
+- Result detail URLs use `/cz/audiokniha/<slug>/`.
+
+## Detail page structure
+
+- Audiobook detail pages embed an escaped `audiobook` object in the Next.js flight payload.
+- The embedded audiobook payload explicitly includes `name`, `published_at`, `duration`, `tracks_duration_in_ms`, `content_language`, and embedded author, narrator, publisher, and category lists.
+- Long descriptions are referenced via `$27` / `$28`-style tokens, with the actual strings pushed in subsequent script tags.
+
+## Internal API check
+
+- The site exposes stable public detail links and embedded structured payloads in HTML.
+- No separate public JSON search endpoint was required for v1 because the search page already returns the needed data in a static response.

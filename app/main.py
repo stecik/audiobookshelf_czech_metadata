@@ -13,6 +13,7 @@ from app.models import HealthResponse
 from app.routers.search import router as search_router
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.services.provider import MetadataProviderService
+from app.services.scrapers.audioteka import AudiotekaScraper
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
 from app.utils.logging import configure_logging
 
@@ -31,7 +32,10 @@ def create_app() -> FastAPI:
             user_agent=settings.scraper_user_agent,
         )
         provider_service = MetadataProviderService(
-            scrapers=[AudiolibrixScraper(http_client=http_client)],
+            scrapers=[
+                AudiolibrixScraper(http_client=http_client),
+                AudiotekaScraper(http_client=http_client),
+            ],
             normalizer=AudiobookshelfNormalizer(),
             detail_enrichment_limit=settings.detail_enrichment_limit,
         )
@@ -45,7 +49,7 @@ def create_app() -> FastAPI:
         await http_client.aclose()
 
     app = FastAPI(
-        title="Audiolibrix Audiobookshelf Metadata Provider",
+        title="Czech Audiobookshelf Metadata Provider",
         version="0.1.0",
         lifespan=lifespan,
     )

@@ -1,73 +1,22 @@
-# Audiolibrix Metadata Provider
+# Czech Metadata Provider
 
-`audiolibrix_scraper` is a runnable FastAPI service that implements the Audiobookshelf custom metadata provider contract for the Czech Audiolibrix storefront at [audiolibrix.com/cs](https://www.audiolibrix.com/cs).
+FastAPI service that implements the Audiobookshelf custom metadata provider contract for two Czech audiobook storefronts:
 
-Audiobookshelf 2.8.0+ can call external metadata providers over HTTP. This project exposes:
+- [Audiolibrix Czech](https://www.audiolibrix.com/cs)
+- [Audioteka Czech](https://audioteka.com/cz/)
+
+It exposes:
 
 - `GET /health`
 - `GET /search?query=...&author=...`
 
-The `/search` response follows the Audiobookshelf shape:
+Audiobookshelf 2.8.0+ can call external metadata providers over HTTP. This service searches configured sources, ranks matches, normalizes the result into the ABS `{"matches": [...]}` shape, and returns it to Audiobookshelf.
 
-```json
-{
-  "matches": [
-    {
-      "title": "1984",
-      "author": "George Orwell"
-    }
-  ]
-}
-```
-
-## Features
-
-- FastAPI API compatible with Audiobookshelf custom providers
-- Static scraping with `httpx` and `selectolax`
-- Clear separation between transport, scraping, ranking, and ABS normalization
-- Optional shared-token auth via the `AUTHORIZATION` header
-- Structured JSON logging and clean JSON errors
-- Docker Compose support plus a local `uv` workflow
-- Fixture-based tests with no live network dependency
-
-## How Audiobookshelf Uses It
-
-At a high level, Audiobookshelf sends a search request to the provider with a required `query` and an optional `author`. The provider looks up the source site, ranks results, and returns them as `{"matches": [...]}` so ABS can populate book metadata.
-
-This service uses Audiolibrix's public Czech search form at:
-
-```text
-https://www.audiolibrix.com/cs/Search/Results?query=...
-```
-
-As of March 15, 2026, the site exposes server-rendered search result cards and a small `search-results-info` JSON block with counts, but no stable internal JSON endpoint for full book results was identified. The implementation therefore uses HTML parsing as the primary strategy and keeps the scraper isolated so a future internal API can be plugged in cleanly if Audiolibrix exposes one later.
-
-## Project Layout
-
-```text
-app/
-  main.py
-  config.py
-  models.py
-  routers/search.py
-  services/provider.py
-  services/scrapers/base.py
-  services/scrapers/audiolibrix.py
-  services/normalizers/audiobookshelf.py
-  clients/http.py
-  utils/text.py
-  utils/logging.py
-tests/
-memory/
-Dockerfile
-docker-compose.yml
-pyproject.toml
-.env.example
-```
+For project structure, tests, and implementation notes, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Local Development With `uv`
 
-Optional: copy the example environment file if you want to override defaults.
+Optional: create a local environment file before working locally.
 
 ```bash
 cp .env.example .env
@@ -91,12 +40,18 @@ Run the tests:
 uv run pytest
 ```
 
-## Docker Compose
+## Deploy With Docker Compose
 
-Start the service with:
+Optional: create a local environment file before starting the service.
 
 ```bash
-docker compose up --build
+cp .env.example .env
+```
+
+Start the provider:
+
+```bash
+docker compose up -d --build
 ```
 
 The API will be available at:
@@ -105,11 +60,23 @@ The API will be available at:
 http://localhost:8000
 ```
 
-`docker-compose.yml` includes sane defaults, and Docker Compose will also read a local `.env` file if you create one from `.env.example`.
+Quick health check:
 
-## Environment Variables
+```bash
+curl http://localhost:8000/health
+```
 
-Supported configuration:
+## Source Strategy
+
+As of March 15, 2026:
+
+- Audiolibrix uses `https://www.audiolibrix.com/cs/Search/Results?query=...` and returns server-rendered result cards.
+- Audioteka uses `https://audioteka.com/cz/vyhledavani/?phrase=...` and returns server-rendered HTML with embedded search payloads.
+- Audioteka detail pages embed structured audiobook payloads plus referenced long descriptions, so no browser automation is required.
+
+## Runtime Configuration
+
+Application settings:
 
 ```env
 APP_HOST=0.0.0.0
@@ -120,9 +87,80 @@ AUDIOBOOKSHELF_AUTH_TOKEN=
 SCRAPER_USER_AGENT=
 ```
 
-If `AUDIOBOOKSHELF_AUTH_TOKEN` is set, requests must include an `AUTHORIZATION` header that matches it. For convenience, the server also accepts `Bearer <token>` when the configured value is the raw token.
+If `AUDIOBOOKSHELF_AUTH_TOKEN` is set, Audiobookshelf must send the same value in the `AUTHORIZATION` header. This provider also accepts `Bearer <token>`.
 
-## API Examples
+Optional shared-network override:
+
+```env
+SHARED_DOCKER_NETWORK=audiobookshelf_shared
+```
+
+`SHARED_DOCKER_NETWORK` is used only by `docker-compose.shared-network.yml`.
+
+## Audiobookshelf Setup
+
+Audiobookshelf expects the provider base URL, not `/search`.
+
+1. In Audiobookshelf, open `Settings -> Metadata Tools -> Custom Metadata Providers -> Add`.
+2. Set `Typ média` / Media Type to `Book`.
+3. Use one of these URLs:
+
+- ABS running locally on the same machine as the provider: `http://localhost:8000`
+- ABS running in Docker on the same Docker network as the provider: `http://provider:8000`
+
+1. Leave `Hodnota autorizačního headeru` / Authorization Header Value blank unless `AUDIOBOOKSHELF_AUTH_TOKEN` is set.
+2. Save the provider and run a metadata search/refresh on a book or audiobook.
+
+## Separate Compose Projects
+
+If Audiobookshelf and this provider run from separate Compose projects, attach both stacks to the same external Docker network and use `http://provider:8000` in ABS.
+
+1. Create a shared network once:
+
+```bash
+docker network create audiobookshelf_shared
+```
+
+If your Audiobookshelf stack already created a network such as `audiobookshelf_default`, you can reuse that instead by setting `SHARED_DOCKER_NETWORK=audiobookshelf_default`.
+
+1. Start this provider with the shared-network override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.shared-network.yml up -d --build
+```
+
+1. Attach the Audiobookshelf stack to the same external network:
+
+```yaml
+services:
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    ports:
+      - 13378:80
+    volumes:
+      - /mnt/books/Audioknihy:/audiobooks
+      - /opt/audiobookshelf/config:/config
+      - /opt/audiobookshelf/metadata:/metadata
+    environment:
+      - TZ=Europe/Prague
+    restart: unless-stopped
+    networks:
+      - abs_shared
+
+networks:
+  abs_shared:
+    external: true
+    name: audiobookshelf_shared
+```
+
+1. In Audiobookshelf, set the provider URL to:
+
+```text
+http://provider:8000
+```
+
+## Verification
 
 Health check:
 
@@ -152,48 +190,36 @@ Example response:
     {
       "title": "1984",
       "author": "George Orwell",
-      "narrator": "Ivo Gogál",
-      "publisher": "Publixing, SLOVART",
+      "narrator": "Jan Vondráček, Jaromír Meduna, Jitka Moučková",
+      "publisher": "Audiostory",
       "publishedYear": "2021",
-      "cover": "https://www.audiolibrix.com/...",
-      "genres": ["Klasika"],
-      "language": "sk",
-      "duration": 706
+      "description": "Audiokniha 1984 obsahuje literární klasiku George Orwella.",
+      "cover": "https://atkcdn.audioteka.com/cc/b2/1984-audiostory/68.jpg",
+      "genres": ["Klasická díla", "Zahraniční literatura"],
+      "language": "cs",
+      "duration": 711
     }
   ]
 }
 ```
 
-## Adding It In Audiobookshelf
+## Known Limitations
 
-1. Start this service locally or with Docker Compose.
-2. In Audiobookshelf, open `Settings -> Metadata Tools`.
-3. Add a custom metadata provider that points to this service.
-4. If your ABS version asks for a base provider URL, use `http://<host>:8000`.
-5. If your ABS version asks for the explicit endpoint, use `http://<host>:8000/search`.
-6. If you configured `AUDIOBOOKSHELF_AUTH_TOKEN`, enter the same value so Audiobookshelf sends it in the `AUTHORIZATION` header.
+- Only Audiolibrix Czech and Audioteka Czech are supported right now.
+- Audiolibrix still relies on HTML parsing because no stable full search JSON endpoint was identified.
+- Audioteka search and detail parsing relies on embedded Next.js payloads, so payload-shape changes may require updates.
+- Detail enrichment is limited to the top-ranked candidates to keep upstream traffic modest.
 
-## Implementation Notes
+## Adding Another Source
 
-- The scraper searches Audiolibrix with a plain GET request.
-- Search result cards provide title, author, narrator, cover, and detail links.
-- The provider enriches only the top-ranked candidates with detail-page requests to pull publisher, published year, description, genres, language, and duration.
-- Ranking prefers exact title matches, then substring/token overlap, then author matches, and finally Czech-language entries when language is distinguishable.
-- The implementation intentionally does not fabricate `isbn`, `asin`, or `series` fields.
+The codebase is structured so another source can be added in a small, isolated change:
 
-## Limitations
+1. Create a new scraper in `app/services/scrapers/`.
+2. Return internal `SourceBook` models from that scraper.
+3. Register it in `app/main.py`.
+4. Reuse the shared ranking and Audiobookshelf normalizer unless the new source needs different behavior.
 
-- Only the Audiolibrix Czech storefront is supported in v1.
-- Audiolibrix search results can still include Slovak and English editions; the ranker prefers Czech entries only when the language can be inferred or extracted.
-- Detail enrichment is limited to the top results to keep upstream traffic modest.
-- If Audiolibrix changes its HTML structure, selector updates may be required.
+## References
 
-## Adding Another Source Later
-
-The codebase is structured so adding another source is small and localized:
-
-1. Create a new scraper class in `app/services/scrapers/` implementing `BaseMetadataScraper`.
-2. Keep source-specific fetching and parsing inside that scraper.
-3. Return internal `SourceBook` models from the scraper.
-4. Register the scraper in `app/main.py` when constructing `MetadataProviderService`.
-5. Reuse the shared ranking and the Audiobookshelf normalizer unless the new source needs different behavior.
+- [Custom Metadata Providers guide](https://www.audiobookshelf.org/guides/custom-metadata-providers/)
+- [Custom provider OpenAPI specification](https://github.com/advplyr/audiobookshelf/blob/master/custom-metadata-provider-specification.yaml)

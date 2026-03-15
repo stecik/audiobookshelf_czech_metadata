@@ -1,7 +1,7 @@
 [project]
 name = "audiolibrix-abs-provider"
 version = "0.1.0"
-description = "Audiobookshelf custom metadata provider for Audiolibrix Czech storefront."
+description = "Audiobookshelf custom metadata provider for Audiolibrix and Audioteka Czech storefronts."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

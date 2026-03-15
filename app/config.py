@@ -5,7 +5,10 @@ import os
 from pydantic import BaseModel, Field, field_validator
 
 
-DEFAULT_USER_AGENT = "audiolibrix-abs-provider/0.1.0 (+https://www.audiolibrix.com/cs)"
+DEFAULT_USER_AGENT = (
+    "audiolibrix-abs-provider/0.1.0 "
+    "(+https://www.audiolibrix.com/cs; https://audioteka.com/cz/)"
+)
 
 
 class Settings(BaseModel):

@@ -13,6 +13,7 @@ NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 HOUR_MINUTE_RE = re.compile(r"(?P<hours>\d+)\s*:\s*(?P<minutes>\d+)\s*h", re.IGNORECASE)
 MINUTE_RE = re.compile(r"(?P<minutes>\d+)\s*(min|minut|minuty|minutes?)\b", re.IGNORECASE)
+ISO_8601_DURATION_RE = re.compile(r"^PT(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?$", re.IGNORECASE)
 
 
 def normalize_whitespace(text: str | None) -> str | None:
@@ -87,6 +88,12 @@ def parse_duration_to_minutes(text: str | None) -> int | None:
     if minute_match:
         return int(minute_match.group("minutes"))
 
+    iso_duration_match = ISO_8601_DURATION_RE.search(normalized)
+    if iso_duration_match:
+        hours = int(iso_duration_match.group("hours") or 0)
+        minutes = int(iso_duration_match.group("minutes") or 0)
+        return (hours * 60) + minutes
+
     return None
 
 
@@ -104,7 +111,7 @@ def map_language_to_code(text: str | None) -> str | None:
     normalized = normalize_match_text(text)
     if not normalized:
         return None
-    if "cestina" in normalized or "cesky" in normalized or normalized == "cs":
+    if "cestina" in normalized or "cesky" in normalized or normalized in {"cs", "cz"}:
         return "cs"
     if "slovensky" in normalized or "slovencina" in normalized or normalized == "sk":
         return "sk"
