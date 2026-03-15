@@ -45,7 +45,8 @@ class KosmasScraper(BaseMetadataScraper):
     source_name = "kosmas"
 
     BASE_URL = "https://www.kosmas.cz"
-    SEARCH_URL = f"{BASE_URL}/audioknihy/"
+    SEARCH_URL = f"{BASE_URL}/hledej/"
+    AUDIOBOOK_ARTICLE_TYPE_IDS = "3593,14074"
 
     PRODUCT_ID_RE = re.compile(r"/knihy/(?P<product_id>\d+)/", re.IGNORECASE)
     SEARCH_ITEMS_RE = re.compile(
@@ -65,7 +66,11 @@ class KosmasScraper(BaseMetadataScraper):
         search_query = normalize_whitespace(query) or ""
         html = await self._http_client.get_text(
             self.SEARCH_URL,
-            params={"sortBy": "relevance", "query": search_query},
+            params={
+                "sortBy": "relevance",
+                "query": search_query,
+                "Filters.ArticleTypeIds": self.AUDIOBOOK_ARTICLE_TYPE_IDS,
+            },
         )
         return self.parse_search_results(html)
 

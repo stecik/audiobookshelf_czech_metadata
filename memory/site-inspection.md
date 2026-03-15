@@ -126,8 +126,8 @@ Date: 2026-03-15
 
 ## Confirmed search path
 
-- The audiobook storefront search resolves to `https://www.kosmas.cz/audioknihy/?sortBy=relevance&query=...`.
-- `query` is the working search parameter on the audiobook category page.
+- The reliable audiobook search route is `https://www.kosmas.cz/hledej/?query=...&Filters.ArticleTypeIds=3593,14074`.
+- The direct `https://www.kosmas.cz/audioknihy/?sortBy=relevance&query=...` URL currently shows a query-looking URL but can return generic catalog items instead of actual search results.
 - Live inspection showed that combining title and author in the upstream query can degrade exact-title relevance, so the scraper should send the title only and let provider-level ranking apply the author boost.
 
 ## Search result structure

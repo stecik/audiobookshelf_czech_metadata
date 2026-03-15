@@ -79,7 +79,7 @@ Current source strategies:
 
 - Audiolibrix: `https://www.audiolibrix.com/cs/Search/Results?query=...`
 - Audioteka: `https://audioteka.com/cz/vyhledavani/?phrase=...`
-- Kosmas: `https://www.kosmas.cz/audioknihy/?sortBy=relevance&query=...`
+- Kosmas: `https://www.kosmas.cz/hledej/?query=...&Filters.ArticleTypeIds=3593,14074`
 
 ## API Examples
 

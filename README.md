@@ -85,7 +85,7 @@ As of March 15, 2026:
 - Audiolibrix uses `https://www.audiolibrix.com/cs/Search/Results?query=...` and returns server-rendered result cards.
 - Audioteka uses `https://audioteka.com/cz/vyhledavani/?phrase=...` and returns server-rendered HTML with embedded search payloads.
 - Audioteka detail pages embed structured audiobook payloads plus referenced long descriptions, so no browser automation is required.
-- Kosmas uses `https://www.kosmas.cz/audioknihy/?sortBy=relevance&query=...` and returns server-rendered audiobook result cards.
+- Kosmas uses `https://www.kosmas.cz/hledej/?query=...&Filters.ArticleTypeIds=3593,14074` and returns server-rendered audiobook result cards.
 - Kosmas detail pages expose bibliographic metadata and full annotation text in static HTML, while category metadata is available in embedded analytics payloads.
 - OneHotBook uses `https://onehotbook.cz/search?q=...&type=product` and returns server-rendered result cards with embedded Shopify product JSON.
 - OneHotBook detail pages expose richer narrator and specification metadata in static HTML, including duration and release date.
@@ -258,6 +258,7 @@ Example response:
 - Audiolibrix still relies on HTML parsing because no stable full search JSON endpoint was identified.
 - Audioteka search and detail parsing relies on embedded Next.js payloads, so payload-shape changes may require updates.
 - Kosmas search works best when the upstream request contains the title only, so the scraper intentionally keeps author matching in the provider-layer ranking instead of the Kosmas query string.
+- Kosmas currently exposes misleading canonical `audioknihy/?query=...` URLs, but the reliable working search response comes from the filtered `/hledej/` route that the scraper uses.
 - OneHotBook search parsing relies on embedded Shopify product JSON inside server-rendered result cards, and detail enrichment relies on the current product/specification page layout.
 - Palmknihy description enrichment is intentionally disabled for now because live inspection found at least one audiobook detail page with a mismatched description block and mismatched JSON-LD description.
 - ProgresGuru relies on first-party storefront JSON endpoints under `/api/audiobooks`, and some multi-author titles only expose the full author list after detail enrichment.

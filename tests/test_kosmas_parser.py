@@ -77,4 +77,8 @@ def test_search_uses_title_only_for_upstream_query_when_author_is_provided() -> 
 
     assert results == []
     assert http_client.last_url == scraper.SEARCH_URL
-    assert http_client.last_params == {"sortBy": "relevance", "query": "1984"}
+    assert http_client.last_params == {
+        "sortBy": "relevance",
+        "query": "1984",
+        "Filters.ArticleTypeIds": "3593,14074",
+    }
