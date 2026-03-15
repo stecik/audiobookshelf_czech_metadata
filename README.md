@@ -2,13 +2,13 @@
 
 FastAPI service that implements the Audiobookshelf custom metadata provider contract for Czech audiobook storefronts:
 
+- [Albatros Media Audioknihy](https://www.albatrosmedia.cz/edice/36467691/audioknihy/)
 - [Audiolibrix Czech](https://www.audiolibrix.com/cs)
 - [Audioteka Czech](https://audioteka.com/cz/)
 - [OneHotBook](https://onehotbook.cz/)
 
 ## To be added
 
-- <https://www.albatrosmedia.cz/edice/36467691/audioknihy/>
 - <https://progresguru.cz/audioknihy>
 - <https://www.kanopa.cz/?srsltid=AfmBOooE7C6n0UFleN04MZB8ro91guZpiepF4U6InyCRCkaRq-VtStmR>
 - <https://www.luxor.cz/c/10726/audioknihy>
@@ -26,6 +26,7 @@ It exposes:
 
 - `GET /health`
 - `GET /search?query=...&author=...`
+- `GET /albatrosmedia/health` and `GET /albatrosmedia/search?...`
 - `GET /audiolibrix/health` and `GET /audiolibrix/search?...`
 - `GET /audioteka/health` and `GET /audioteka/search?...`
 - `GET /onehotbook/health` and `GET /onehotbook/search?...`
@@ -90,6 +91,8 @@ curl http://localhost:8000/health
 
 As of March 15, 2026:
 
+- Albatros Media uses `https://www.albatrosmedia.cz/hledani/?Text=...` and returns server-rendered result cards with embedded per-product metadata in `data-component-args`.
+- Albatros Media detail pages expose narrator, duration, language, genre, and publish date in the static `Detailní informace` section.
 - Audiolibrix uses `https://www.audiolibrix.com/cs/Search/Results?query=...` and returns server-rendered result cards.
 - Audioteka uses `https://audioteka.com/cz/vyhledavani/?phrase=...` and returns server-rendered HTML with embedded search payloads.
 - Audioteka detail pages embed structured audiobook payloads plus referenced long descriptions, so no browser automation is required.
@@ -107,6 +110,7 @@ LOG_LEVEL=INFO
 REQUEST_TIMEOUT_SECONDS=20
 AUDIOBOOKSHELF_AUTH_TOKEN=
 SCRAPER_USER_AGENT=
+ENABLE_ALBATROSMEDIA=true
 ENABLE_AUDIOLIBRIX=true
 ENABLE_AUDIOTEKA=true
 ENABLE_ONEHOTBOOK=true
@@ -118,14 +122,6 @@ All sources are enabled by default. Set any `ENABLE_*` flag to `false` to skip t
 
 When a source is disabled, it is excluded from the global `/search` results and its source-specific endpoint is not registered.
 
-Optional shared-network override:
-
-```env
-SHARED_DOCKER_NETWORK=audiobookshelf_shared
-```
-
-`SHARED_DOCKER_NETWORK` is used only by `docker-compose.shared-network.yml`.
-
 ## Audiobookshelf Setup
 
 Audiobookshelf expects the provider base URL, not `/search`.
@@ -136,6 +132,7 @@ Audiobookshelf expects the provider base URL, not `/search`.
 
 - ABS running locally on the same machine as the provider: `http://localhost:8000`
 - ABS running in Docker on the same Docker network as the provider: `http://provider:8000`
+- Albatros Media-only provider: `http://localhost:8000/albatrosmedia`
 - Audiolibrix-only provider: `http://localhost:8000/audiolibrix`
 - Audioteka-only provider: `http://localhost:8000/audioteka`
 - OneHotBook-only provider: `http://localhost:8000/onehotbook`
@@ -148,20 +145,6 @@ If you want separate selectors in Audiobookshelf for each store, add multiple cu
 ## Separate Compose Projects
 
 If Audiobookshelf and this provider run from separate Compose projects, attach both stacks to the same external Docker network and use `http://provider:8000` in ABS.
-
-1. Create a shared network once:
-
-```bash
-docker network create audiobookshelf_shared
-```
-
-If your Audiobookshelf stack already created a network such as `audiobookshelf_default`, you can reuse that instead by setting `SHARED_DOCKER_NETWORK=audiobookshelf_default`.
-
-1. Start this provider with the shared-network override:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.shared-network.yml up -d --build
-```
 
 1. Attach the Audiobookshelf stack to the same external network:
 
@@ -214,6 +197,12 @@ Audioteka only:
 curl "http://localhost:8000/audioteka/search?query=1984&author=George%20Orwell"
 ```
 
+Albatros Media only:
+
+```bash
+curl "http://localhost:8000/albatrosmedia/search?query=Podzimn%C3%AD%20d%C4%9Bsy&author=Agatha%20Christie"
+```
+
 Search with auth:
 
 ```bash
@@ -245,7 +234,8 @@ Example response:
 
 ## Known Limitations
 
-- Audiolibrix Czech, Audioteka Czech, and OneHotBook are supported right now.
+- Albatros Media Audioknihy, Audiolibrix Czech, Audioteka Czech, and OneHotBook are supported right now.
+- Albatros Media search is global storefront search, so the scraper applies audiobook-only filtering heuristics to drop obvious non-audiobook matches.
 - Audiolibrix still relies on HTML parsing because no stable full search JSON endpoint was identified.
 - Audioteka search and detail parsing relies on embedded Next.js payloads, so payload-shape changes may require updates.
 - OneHotBook search parsing relies on embedded Shopify product JSON inside server-rendered result cards, and detail enrichment relies on the current product/specification page layout.

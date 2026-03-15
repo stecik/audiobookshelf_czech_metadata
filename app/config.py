@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 DEFAULT_USER_AGENT = (
     "audiolibrix-abs-provider/0.1.0 "
-    "(+https://www.audiolibrix.com/cs; https://audioteka.com/cz/; https://onehotbook.cz/)"
+    "(+https://www.audiolibrix.com/cs; https://audioteka.com/cz/; https://onehotbook.cz/; https://www.albatrosmedia.cz/)"
 )
 
 
@@ -22,6 +22,7 @@ class Settings(BaseModel):
     enable_audiolibrix: bool = True
     enable_audioteka: bool = True
     enable_onehotbook: bool = True
+    enable_albatrosmedia: bool = True
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -48,4 +49,5 @@ class Settings(BaseModel):
             enable_audiolibrix=os.getenv("ENABLE_AUDIOLIBRIX", "true"),
             enable_audioteka=os.getenv("ENABLE_AUDIOTEKA", "true"),
             enable_onehotbook=os.getenv("ENABLE_ONEHOTBOOK", "true"),
+            enable_albatrosmedia=os.getenv("ENABLE_ALBATROSMEDIA", "true"),
         )

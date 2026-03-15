@@ -70,14 +70,6 @@ AUDIOBOOKSHELF_AUTH_TOKEN=
 SCRAPER_USER_AGENT=
 ```
 
-Optional Docker Compose override setting:
-
-```env
-SHARED_DOCKER_NETWORK=audiobookshelf_shared
-```
-
-`SHARED_DOCKER_NETWORK` is only used by `docker-compose.shared-network.yml`.
-
 ## How Audiobookshelf Uses It
 
 Audiobookshelf sends a search request to the provider with a required `query` and an optional `author`. The provider looks up the source site, ranks results, and returns them as `{"matches": [...]}` so ABS can populate book metadata.

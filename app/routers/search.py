@@ -26,6 +26,7 @@ def make_provider_service_dependency(state_key: str):
 
 get_provider_service = make_provider_service_dependency("provider_service")
 provider_service_dependencies = {
+    "albatrosmedia": make_provider_service_dependency("provider_service_albatrosmedia"),
     "audiolibrix": make_provider_service_dependency("provider_service_audiolibrix"),
     "audioteka": make_provider_service_dependency("provider_service_audioteka"),
     "onehotbook": make_provider_service_dependency("provider_service_onehotbook"),

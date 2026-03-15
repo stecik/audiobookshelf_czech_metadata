@@ -16,6 +16,7 @@ from app.routers.search import (
 )
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.services.provider import MetadataProviderService
+from app.services.scrapers.albatrosmedia import AlbatrosMediaScraper
 from app.services.scrapers.audioteka import AudiotekaScraper
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
 from app.services.scrapers.base import BaseMetadataScraper
@@ -29,6 +30,8 @@ logger = logging.getLogger(__name__)
 def build_scrapers(*, settings: Settings, http_client: HttpClient) -> dict[str, BaseMetadataScraper]:
     scrapers: dict[str, BaseMetadataScraper] = {}
 
+    if settings.enable_albatrosmedia:
+        scrapers["albatrosmedia"] = AlbatrosMediaScraper(http_client=http_client)
     if settings.enable_audiolibrix:
         scrapers["audiolibrix"] = AudiolibrixScraper(http_client=http_client)
     if settings.enable_audioteka:

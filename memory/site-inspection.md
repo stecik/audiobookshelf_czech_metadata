@@ -88,3 +88,34 @@ Date: 2026-03-15
 
 - Shopify predictive search is enabled on the storefront, but the public search page already returns the complete embedded product payload needed for reliable parsing.
 - A separate JSON search endpoint was not required for this implementation.
+
+# Albatros Media Site Inspection
+
+Date: 2026-03-15
+
+## Confirmed search path
+
+- The public search route resolves to `https://www.albatrosmedia.cz/hledani/?Text=...`.
+- Search result pages are server-rendered HTML and do not require JavaScript execution.
+
+## Search result structure
+
+- Search result cards render under `.product-list .p-l__item`.
+- Result title selector: `.p-l-i__title a`
+- Result author links selector: `.p-l-i__authors a.author`
+- Result cover selector: `.figure__inner img`
+- Each result card includes a `data-component-args` JSON blob on the add-to-cart control with `productId`, `productName`, author data, brand name, category name, and EAN.
+- Global search is not audiobook-only, so audiobook filtering is required. Current implementation keeps entries whose title or slug clearly indicates `audiokniha`.
+
+## Detail page structure
+
+- Title selector: `.product-top__header h1`
+- Author links selector: `.product__author a.author`
+- Long description selector: `.p-i__long-anotation .p__text`
+- Detail rows render as `.product__param` blocks with label/value pairs.
+- Useful labels confirmed on `Podzimní děsy (audiokniha)`: `Žánr`, `Interpret`, `Délka`, `Jazyk`, `EAN`, `Datum vydání`, `Nakladatelství`, `Edice`.
+
+## Internal API check
+
+- No public JSON search endpoint was required because the server-rendered search page already exposes the fields needed for matching and routing to detail pages.
+- Detail enrichment is still needed to obtain narrator and duration metadata.
