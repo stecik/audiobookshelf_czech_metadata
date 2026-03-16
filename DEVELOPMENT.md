@@ -67,9 +67,12 @@ APP_HOST=0.0.0.0
 APP_PORT=8000
 LOG_LEVEL=INFO
 REQUEST_TIMEOUT_SECONDS=20
+SCRAPER_TIMEOUT_SECONDS=8
 AUDIOBOOKSHELF_AUTH_TOKEN=
 SCRAPER_USER_AGENT=
 ```
+
+`REQUEST_TIMEOUT_SECONDS` is the timeout for a single outbound HTTP request. `SCRAPER_TIMEOUT_SECONDS` is the overall timeout for one scraper search or one detail-enrichment task.
 
 ## How Audiobookshelf Uses It
 

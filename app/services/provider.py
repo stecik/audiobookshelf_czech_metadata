@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 MINIMUM_RELEVANCE_SCORE = 60.0
 RELEVANCE_SCORE_WINDOW = 20.0
 MINIMUM_TITLE_TOKEN_COVERAGE = 0.5
+SCRAPER_TIMEOUT_REASON = "scraper timed out"
 
 
 class UpstreamUnavailableError(Exception):
@@ -237,18 +238,23 @@ class MetadataProviderService:
         scrapers: Sequence[BaseMetadataScraper],
         normalizer: AudiobookshelfNormalizer,
         detail_enrichment_limit: int = 5,
+        scraper_timeout_seconds: float = 8.0,
     ) -> None:
         self._scrapers = list(scrapers)
         self._scrapers_by_name = {scraper.source_name: scraper for scraper in scrapers}
         self._normalizer = normalizer
         self._detail_enrichment_limit = detail_enrichment_limit
+        self._scraper_timeout_seconds = scraper_timeout_seconds
 
     async def search(self, *, query: str, author: str | None = None) -> SearchResponse:
         aggregated: list[SourceBook] = []
         failures: list[UpstreamFetchError] = []
 
         results = await asyncio.gather(
-            *(scraper.search(query=query, author=author) for scraper in self._scrapers),
+            *(
+                self._search_with_timeout(scraper, query=query, author=author)
+                for scraper in self._scrapers
+            ),
             return_exceptions=True,
         )
 
@@ -271,7 +277,11 @@ class MetadataProviderService:
 
             aggregated.extend(result)
 
-        if not aggregated and failures:
+        if (
+            not aggregated
+            and failures
+            and not self._all_failures_are_scraper_timeouts(failures)
+        ):
             raise UpstreamUnavailableError("upstream source unavailable")
 
         ranked = sort_book_results(aggregated, query=query, author=author)
@@ -294,6 +304,24 @@ class MetadataProviderService:
 
         return self._normalizer.normalize_many(filtered_results)
 
+    async def _search_with_timeout(
+        self,
+        scraper: BaseMetadataScraper,
+        *,
+        query: str,
+        author: str | None,
+    ) -> list[SourceBook]:
+        try:
+            return await asyncio.wait_for(
+                scraper.search(query=query, author=author),
+                timeout=self._scraper_timeout_seconds,
+            )
+        except asyncio.TimeoutError as exc:
+            raise self._build_timeout_error(
+                scraper_name=scraper.source_name,
+                operation="search",
+            ) from exc
+
     async def _enrich_top_results(
         self, books: Sequence[SourceBook]
     ) -> list[SourceBook]:
@@ -309,7 +337,26 @@ class MetadataProviderService:
                 return book
 
             try:
-                return await scraper.enrich(book)
+                return await asyncio.wait_for(
+                    scraper.enrich(book),
+                    timeout=self._scraper_timeout_seconds,
+                )
+            except asyncio.TimeoutError:
+                timeout_error = self._build_timeout_error(
+                    scraper_name=book.source,
+                    operation="detail_enrichment",
+                    url=book.detail_url,
+                )
+                logger.warning(
+                    "provider.detail_enrichment_failed",
+                    extra={
+                        "scraper": book.source,
+                        "url": timeout_error.url,
+                        "timeout_seconds": timeout_error.timeout_seconds,
+                        "reason": timeout_error.reason,
+                    },
+                )
+                return book
             except UpstreamFetchError as exc:
                 logger.warning(
                     "provider.detail_enrichment_failed",
@@ -345,3 +392,23 @@ class MetadataProviderService:
         for book in books:
             deduplicated[(book.source, book.source_id)] = book
         return list(deduplicated.values())
+
+    def _build_timeout_error(
+        self,
+        *,
+        scraper_name: str,
+        operation: str,
+        url: str | None = None,
+    ) -> UpstreamFetchError:
+        return UpstreamFetchError(
+            url=url or f"scraper://{scraper_name}/{operation}",
+            reason=SCRAPER_TIMEOUT_REASON,
+            timeout_seconds=self._scraper_timeout_seconds,
+        )
+
+    def _all_failures_are_scraper_timeouts(
+        self, failures: Sequence[UpstreamFetchError]
+    ) -> bool:
+        return bool(failures) and all(
+            failure.reason == SCRAPER_TIMEOUT_REASON for failure in failures
+        )

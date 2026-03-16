@@ -4,7 +4,6 @@ import os
 
 from pydantic import BaseModel, Field, field_validator
 
-
 DEFAULT_USER_AGENT = (
     "audiolibrix-abs-provider/0.1.0 "
     "(+https://www.audiolibrix.com/cs; https://audioteka.com/cz/; https://www.kosmas.cz/audioknihy/; "
@@ -22,6 +21,7 @@ class Settings(BaseModel):
     app_port: int = Field(default=8000, ge=1, le=65535)
     log_level: str = "INFO"
     request_timeout_seconds: float = Field(default=20.0, gt=0)
+    scraper_timeout_seconds: float = Field(default=8.0, gt=0)
     audiobookshelf_auth_token: str | None = None
     scraper_user_agent: str = DEFAULT_USER_AGENT
     detail_enrichment_limit: int = Field(default=5, ge=1, le=10)
@@ -62,6 +62,7 @@ class Settings(BaseModel):
             app_port=os.getenv("APP_PORT", "8000"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             request_timeout_seconds=os.getenv("REQUEST_TIMEOUT_SECONDS", "20"),
+            scraper_timeout_seconds=os.getenv("SCRAPER_TIMEOUT_SECONDS", "8"),
             audiobookshelf_auth_token=os.getenv("AUDIOBOOKSHELF_AUTH_TOKEN"),
             scraper_user_agent=os.getenv("SCRAPER_USER_AGENT", DEFAULT_USER_AGENT),
             enable_alza=os.getenv("ENABLE_ALZA", "true"),

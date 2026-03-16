@@ -91,6 +91,7 @@ APP_HOST=0.0.0.0
 APP_PORT=8000
 LOG_LEVEL=INFO
 REQUEST_TIMEOUT_SECONDS=20
+SCRAPER_TIMEOUT_SECONDS=8
 AUDIOBOOKSHELF_AUTH_TOKEN=
 SCRAPER_USER_AGENT=
 ENABLE_ALZA=false
@@ -112,6 +113,14 @@ ENABLE_ROZHLAS=true
 ```
 
 If `AUDIOBOOKSHELF_AUTH_TOKEN` is set, Audiobookshelf must send the same value in the `AUTHORIZATION` header. This provider also accepts `Bearer <token>`.
+
+## Audiobookshelf metadata timeout
+
+- ABS has max metadata timeout set to 10s
+- The longer `REQUEST_TIMEOUT_SECONDS` and `SCRAPER_TIMEOUT_SECONDS` the more accurate but slower results you get
+- if you see no results, lower the timeout (do not go above 8s)
+
+`REQUEST_TIMEOUT_SECONDS` controls the timeout of a single upstream HTTP request. `SCRAPER_TIMEOUT_SECONDS` controls the total time budget for one scraper search or detail-enrichment task. If one scraper exceeds that limit, its results are skipped and the remaining scrapers still complete normally. If every scraper times out, the API returns an empty `matches` list instead of failing the request.
 
 All sources are enabled by default. Set any `ENABLE_*` flag to `false` to skip that storefront entirely. ALZA is currently not working
 

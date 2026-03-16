@@ -9,15 +9,12 @@ from fastapi.responses import JSONResponse
 
 from app.clients.http import HttpClient
 from app.config import Settings
-from app.routers.search import (
-    create_provider_router,
-    provider_service_dependencies,
-    router as search_router,
-)
+from app.routers.search import create_provider_router, provider_service_dependencies
+from app.routers.search import router as search_router
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.services.provider import MetadataProviderService
-from app.services.scrapers.alza import AlzaScraper
 from app.services.scrapers.albatrosmedia import AlbatrosMediaScraper
+from app.services.scrapers.alza import AlzaScraper
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
 from app.services.scrapers.audioteka import AudiotekaScraper
 from app.services.scrapers.base import BaseMetadataScraper
@@ -27,19 +24,20 @@ from app.services.scrapers.kosmas import KosmasScraper
 from app.services.scrapers.luxor import LuxorScraper
 from app.services.scrapers.megaknihy import MegaknihyScraper
 from app.services.scrapers.naposlech import NaposlechScraper
-from app.services.scrapers.onehotbook import OneHotBookScraper
 from app.services.scrapers.o2knihovna import O2KnihovnaScraper
+from app.services.scrapers.onehotbook import OneHotBookScraper
 from app.services.scrapers.palmknihy import PalmknihyScraper
 from app.services.scrapers.progresguru import ProgresGuruScraper
 from app.services.scrapers.radioteka import RadiotekaScraper
 from app.services.scrapers.rozhlas import RozhlasScraper
 from app.utils.logging import configure_logging
 
-
 logger = logging.getLogger(__name__)
 
 
-def build_scrapers(*, settings: Settings, http_client: HttpClient) -> dict[str, BaseMetadataScraper]:
+def build_scrapers(
+    *, settings: Settings, http_client: HttpClient
+) -> dict[str, BaseMetadataScraper]:
     scrapers: dict[str, BaseMetadataScraper] = {}
 
     if settings.enable_alza:
@@ -82,11 +80,13 @@ def build_provider_service(
     *,
     scrapers: list[BaseMetadataScraper],
     detail_enrichment_limit: int,
+    scraper_timeout_seconds: float,
 ) -> MetadataProviderService:
     return MetadataProviderService(
         scrapers=scrapers,
         normalizer=AudiobookshelfNormalizer(),
         detail_enrichment_limit=detail_enrichment_limit,
+        scraper_timeout_seconds=scraper_timeout_seconds,
     )
 
 
@@ -104,6 +104,7 @@ def create_app() -> FastAPI:
         provider_service = build_provider_service(
             scrapers=list(scrapers.values()),
             detail_enrichment_limit=settings.detail_enrichment_limit,
+            scraper_timeout_seconds=settings.scraper_timeout_seconds,
         )
 
         app.state.settings = settings
@@ -116,6 +117,7 @@ def create_app() -> FastAPI:
                 build_provider_service(
                     scrapers=[scraper],
                     detail_enrichment_limit=settings.detail_enrichment_limit,
+                    scraper_timeout_seconds=settings.scraper_timeout_seconds,
                 ),
             )
 

@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import asyncio
 
-from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.models import SourceBook
-from app.services.provider import MetadataProviderService, filter_book_results, score_book_result, sort_book_results
+from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
+from app.services.provider import (
+    MetadataProviderService,
+    filter_book_results,
+    score_book_result,
+    sort_book_results,
+)
 from app.services.scrapers.base import BaseMetadataScraper
 
 
@@ -53,7 +58,9 @@ def test_ranking_prefers_exact_title_author_and_czech_language() -> None:
 
     assert ordered[0].source_id == "1"
     assert ordered[1].source_id == "2"
-    assert score_book_result(exact_czech, query="1984", author="George Orwell") > score_book_result(
+    assert score_book_result(
+        exact_czech, query="1984", author="George Orwell"
+    ) > score_book_result(
         exact_slovak,
         query="1984",
         author="George Orwell",
@@ -98,7 +105,9 @@ def test_filter_book_results_keeps_only_exact_title_author_matches() -> None:
     ]
 
 
-def test_filter_book_results_uses_author_to_drop_same_query_noise_without_exact_title() -> None:
+def test_filter_book_results_uses_author_to_drop_same_query_noise_without_exact_title() -> (
+    None
+):
     correct = make_book(
         source_id="1",
         title="Rytíř sedmi království",
@@ -127,7 +136,9 @@ def test_filter_book_results_uses_author_to_drop_same_query_noise_without_exact_
     assert [book.source_id for book in filtered] == ["1"]
 
 
-def test_filter_book_results_prefers_author_matched_prefixed_title_over_wrong_exact_title() -> None:
+def test_filter_book_results_prefers_author_matched_prefixed_title_over_wrong_exact_title() -> (
+    None
+):
     wrong_exact_title = make_book(
         source_id="1",
         title="Volný pád",
@@ -156,7 +167,9 @@ def test_filter_book_results_prefers_author_matched_prefixed_title_over_wrong_ex
     assert [book.source_id for book in filtered] == ["2"]
 
 
-def test_filter_book_results_treats_hyphenated_and_compact_titles_as_equivalent() -> None:
+def test_filter_book_results_treats_hyphenated_and_compact_titles_as_equivalent() -> (
+    None
+):
     wrong_same_author = make_book(
         source_id="1",
         title="Vznešený dům",
@@ -186,6 +199,16 @@ class StaticScraper(BaseMetadataScraper):
 
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
         return self._books
+
+
+class SlowScraper(BaseMetadataScraper):
+    def __init__(self, source_name: str, *, delay_seconds: float) -> None:
+        self.source_name = source_name
+        self._delay_seconds = delay_seconds
+
+    async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
+        await asyncio.sleep(self._delay_seconds)
+        return []
 
 
 def test_provider_service_returns_filtered_matches_only() -> None:
@@ -234,3 +257,40 @@ def test_provider_service_returns_filtered_matches_only() -> None:
 
     assert [match.title for match in response.matches] == ["Zabíjení", "Zabíjení"]
     assert {match.author for match in response.matches} == {"Štěpán Kopřiva"}
+
+
+def test_provider_service_ignores_slow_scraper_and_returns_fast_results() -> None:
+    fast_book = make_book(
+        source_id="1",
+        title="1984",
+        authors=["George Orwell"],
+        language="cs",
+    )
+
+    service = MetadataProviderService(
+        scrapers=[
+            SlowScraper("slow", delay_seconds=0.05),
+            StaticScraper("audiolibrix", [fast_book]),
+        ],
+        normalizer=AudiobookshelfNormalizer(),
+        detail_enrichment_limit=1,
+        scraper_timeout_seconds=0.01,
+    )
+
+    response = asyncio.run(service.search(query="1984", author="George Orwell"))
+
+    assert [match.title for match in response.matches] == ["1984"]
+    assert [match.author for match in response.matches] == ["George Orwell"]
+
+
+def test_provider_service_returns_empty_matches_when_all_scrapers_time_out() -> None:
+    service = MetadataProviderService(
+        scrapers=[SlowScraper("slow", delay_seconds=0.05)],
+        normalizer=AudiobookshelfNormalizer(),
+        detail_enrichment_limit=1,
+        scraper_timeout_seconds=0.01,
+    )
+
+    response = asyncio.run(service.search(query="1984", author="George Orwell"))
+
+    assert response.matches == []
