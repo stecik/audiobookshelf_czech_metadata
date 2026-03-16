@@ -1,7 +1,6 @@
 services:
   provider:
-    image: ghcr.io/stecik/audiobookshelf_czech_metadata:latest
-    pull_policy: always
+    build: .
     env_file:
       - .env
     ports:
@@ -14,8 +13,8 @@ services:
       AUDIOBOOKSHELF_AUTH_TOKEN: ${AUDIOBOOKSHELF_AUTH_TOKEN:-}
       SCRAPER_USER_AGENT: ${SCRAPER_USER_AGENT:-}
     restart: unless-stopped
-    # networks: # Use the existing network created by Audiobookshelf
-    #   - audiobookshelf_default
+#     networks: # Use the existing network created by Audiobookshelf
+#       - audiobookshelf_default
 
 # networks: # Use the existing network created by Audiobookshelf
 #   audiobookshelf_default:
