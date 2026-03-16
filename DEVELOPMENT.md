@@ -75,12 +75,45 @@ SCRAPER_USER_AGENT=
 
 Audiobookshelf sends a search request to the provider with a required `query` and an optional `author`. The provider looks up the source site, ranks results, and returns them as `{"matches": [...]}` so ABS can populate book metadata.
 
-Current source strategies:
+## Source Strategy
 
-- Audiolibrix: `https://www.audiolibrix.com/cs/Search/Results?query=...`
-- Audioteka: `https://audioteka.com/cz/vyhledavani/?phrase=...`
-- Kosmas: `https://www.kosmas.cz/hledej/?query=...&Filters.ArticleTypeIds=3593,14074`
-- Luxor: `https://www.luxor.cz/api/luigis/search?params=...` with UTF-8 JSON base64 request payloads and audiobook assortment filters `31` / `20`
+As of March 16, 2026:
+
+- Alza uses the storefront search route `https://www.alza.cz/search.htm?exps=...` with a mobile fallback at `https://m.alza.cz/search.htm?exps=...`.
+- Alza result pages are parsed conservatively via product-detail URLs plus nearby audiobook summary text, because the storefront can return generic product-search markup rather than a clean audiobook-only listing API.
+- Alza detail enrichment reads generic `<h1>` / Open Graph metadata plus visible labeled fields such as `Autor`, `Čte`, `Jazyk`, `Rok vydání`, `Délka`, and `Kategorie`.
+- Albatros Media uses `https://www.albatrosmedia.cz/hledani/?Text=...` and returns server-rendered result cards with embedded per-product metadata in `data-component-args`.
+- Albatros Media detail pages expose narrator, duration, language, genre, and publish date in the static `Detailní informace` section.
+- Audiolibrix uses `https://www.audiolibrix.com/cs/Search/Results?query=...` and returns server-rendered result cards.
+- Audioteka uses `https://audioteka.com/cz/vyhledavani/?phrase=...` and returns server-rendered HTML with embedded search payloads.
+- Audioteka detail pages embed structured audiobook payloads plus referenced long descriptions, so no browser automation is required.
+- Kanopa uses `https://www.kanopa.cz/vyhledavani/?string=...` and returns server-rendered Shoptet product cards.
+- Kanopa detail pages expose author, narrator, publisher, genres, duration, and long description in static HTML.
+- Knihy Dobrovsky uses `https://www.knihydobrovsky.cz/vyhledavani?search=...` and returns server-rendered storefront search results.
+- Knihy Dobrovsky search is global storefront search, so the scraper keeps only audiobook detail URLs under `/audiokniha...`.
+- Knihy Dobrovsky detail pages expose author, interprets, publisher, publish date, language, duration, categories, and tags in static HTML, with cover and long description available in JSON-LD.
+- Kosmas uses `https://www.kosmas.cz/hledej/?query=...&Filters.ArticleTypeIds=3593,14074` and returns server-rendered audiobook result cards.
+- Kosmas detail pages expose bibliographic metadata and full annotation text in static HTML, while category metadata is available in embedded analytics payloads.
+- Luxor uses the internal `https://www.luxor.cz/api/luigis/search` endpoint, which accepts a UTF-8 JSON request encoded as URL-escaped base64 in the `params` query parameter.
+- Luxor search stays scoped to audiobook formats via assortment filters `31` and `20`, and the payload already exposes title, author, publisher, annotation, cover image path, and category metadata.
+- Luxor detail pages currently render as an Angular shell without stable server-rendered metadata, so the Luxor scraper intentionally remains search-payload-only for now.
+- Megaknihy uses `https://www.megaknihy.cz/vyhledavani?orderby=position&orderway=desc&search_query=...` and returns server-rendered catalog cards.
+- Megaknihy search is global storefront search, so the scraper keeps only audiobook-like results using URL, ribbon, title, and embedded analytics-category signals before detail enrichment.
+- Naposlech uses the WordPress REST endpoint `https://naposlech.cz/wp-json/wp/v2/audiokniha?search=...&per_page=10`, which returns audiobook-profile results without mixing in articles or topic pages.
+- Naposlech detail enrichment uses server-rendered metadata columns on `/audiokniha/...` pages for author, narrator, publisher, genres, duration, cover, and audiobook release year.
+- OneHotBook uses `https://onehotbook.cz/search?q=...&type=product` and returns server-rendered result cards with embedded Shopify product JSON.
+- OneHotBook detail pages expose richer narrator and specification metadata in static HTML, including duration and release date.
+- O2 Knihovna uses `https://www.o2knihovna.cz/audioknihy/hledani?q=...` and returns server-rendered audiobook result cards.
+- O2 Knihovna detail pages expose title, author, genres, duration, narrator, publisher, publish year, language, and description in static HTML. Extra narrator names are only added when the summary text explicitly uses a `Čte ...` sentence.
+- Palmknihy uses `https://www.palmknihy.cz/vyhledavani$a885-search?query=...` and returns server-rendered result cards where audiobook matches can be filtered via `item-type="audiobook"`.
+- Palmknihy detail pages expose publisher, genres, language, duration, and publish year in static HTML. The description block looked inconsistent on at least one live audiobook page, so description enrichment is intentionally conservative for this source.
+- ProgresGuru uses the storefront JSON API at `https://progresguru.cz/api/audiobooks?search=...&page=1`.
+- ProgresGuru detail enrichment uses `https://progresguru.cz/api/audiobooks/<slug>` for subtitle, duration, publisher, full author list, narrator list, description, and publish date.
+- Radioteka uses `https://www.radioteka.cz/hledani?q=...` and returns server-rendered search sections grouped by content type.
+- Radioteka audiobook matches can be isolated via `data-provider="croslovo"`, and detail pages expose author, narrator, publisher, year, duration, and description in static HTML.
+- Rozhlas uses the public topic page `https://temata.rozhlas.cz/hry-a-cetba` with GET filtering via the `combine` parameter.
+- Rozhlas result cards are server-rendered HTML and expose title, teaser, cover, optional tag badges, and either `Délka audia` or `Počet epizod`.
+- Rozhlas detail pages on Czech Radio station subdomains embed a `mujRozhlasPlayer` payload with playlist durations and expose performers / production years in shared Drupal credits blocks.
 
 ## API Examples
 
