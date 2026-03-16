@@ -107,21 +107,24 @@ curl \
 Example response:
 
 ```json
-{
-  "matches": [
-    {
-      "title": "1984",
-      "author": "George Orwell",
-      "narrator": "Ivo Gogál",
-      "publisher": "Publixing, SLOVART",
-      "publishedYear": "2021",
-      "cover": "https://www.audiolibrix.com/...",
-      "genres": ["Klasika"],
-      "language": "sk",
-      "duration": 706
-    }
-  ]
-}
+"matches": [
+        {
+            "title": "1984",
+            "author": "George Orwell",
+            "narrator": "David Novotný",
+            "publisher": "OneHotBook",
+            "publishedYear": "2021",
+            "description": "„Svoboda je svoboda říkat, že dvě a dvě jsou čtyři. Pokud je toto zaručeno, všechno ostatní už vyplyne samo.“ Ve zbídačelém Londýně na území superstátu Oceánie se v dubnu 1984 úředník Ministerstva pravdy Winston Smith přiměje vzepřít. Už se mu zajídají pěstěná stádnost i technika normopsychu , využívané coby hráz proti občanskému vzdoru. Pochyby začne potají svěřovat deníku i přesto, že každý pohyb v téhle chmurné zemi monitorují telestěny Velkého bratra. Krutovláda jedné Strany navíc s Winstonovým přispěním z dějin cíleně vymazává veškeré vzpomínky na dobu před Revolucí, neboť hodlá pomocí znetvořeného jazyka zvaného neolekt obyvatelstvo opanovat na těle, v duchu i v srdci – ryzí, nezměrnou, totalitní mocí. Zbývá aspoň jiskřička naděje na svobodu? Nicméně i Winstonova láska k Julii a krimistyk s ní představují protestní akt, takže za oběma asi brzy spadne klec. A pak…? Pak už jen drtivé vyústění znamenitě propracované antiutopie o nelidském režimu, která téměř tři čtvrtě století vévodí svému literárnímu žánru. Vizionářský román v roce 1984 zfilmoval režisér Michael Radford s Johnem Hurtem v hlavní roli a s hudbou od skupiny Eurythmics. Snímek byl vyhlášen nejlepším britským filmem sezony. „Útlak osobitosti, jaký zažil Winston, trvá ve stále nových formách: s tím, jak se na nás valí zprávy a jak se hned popírají, překrucují, přepisují. Orwella by to rozhodně nepřekvapilo, avšak dopad toho všeho vystihl nejlíp on.“ – The New York Times (2017)",
+            "cover": "https://onehotbook.cz/cdn/shop/files/George_Orwell_1984_audio_OneHotBook_ctverectextura.jpg?v=1763901069",
+            "genres": [
+                "Moderní klasika",
+                "Sci-fi",
+                "Sci-fi a fantasy",
+                "Světová literatura"
+            ],
+            "language": "cs"
+        }
+]
 ```
 
 ## Implementation Notes

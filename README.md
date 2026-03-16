@@ -2,7 +2,7 @@
 
 FastAPI service that implements the Audiobookshelf custom metadata provider contract for Czech audiobook storefronts:
 
-- [Alza Audioknihy](https://www.alza.cz/media/audioknihy/18854370.htm)
+- [Alza Audioknihy](https://www.alza.cz/media/audioknihy/18854370.htm) (currently not working)
 - [Albatros Media Audioknihy](https://www.albatrosmedia.cz/edice/36467691/audioknihy/)
 - [Audiolibrix Czech](https://www.audiolibrix.com/cs)
 - [Audioteka Czech](https://audioteka.com/cz/)

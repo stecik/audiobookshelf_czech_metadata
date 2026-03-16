@@ -5,7 +5,6 @@ from pathlib import Path
 from app.models import SourceBook
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
 
-
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
@@ -29,14 +28,24 @@ def test_parse_search_results_fixture_extracts_cards() -> None:
     assert results[0].authors == ["George Orwell"]
     assert results[0].narrators == ["Jiří Ornest"]
     assert results[0].cover_url is not None
-    assert results[0].detail_url.endswith("/cs/Directory/Book/144/Audiokniha-1984-George-Orwell")
+    assert results[0].detail_url.endswith(
+        "/cs/Directory/Book/144/Audiokniha-1984-George-Orwell"
+    )
 
 
 def test_parse_detail_page_fixture_extracts_enriched_metadata() -> None:
-    search_html = (FIXTURES_DIR / "audiolibrix_search_1984.html").read_text(encoding="utf-8")
-    detail_html = (FIXTURES_DIR / "audiolibrix_detail_1984.html").read_text(encoding="utf-8")
+    search_html = (FIXTURES_DIR / "audiolibrix_search_1984.html").read_text(
+        encoding="utf-8"
+    )
+    detail_html = (FIXTURES_DIR / "audiolibrix_detail_1984.html").read_text(
+        encoding="utf-8"
+    )
     scraper = build_scraper()
-    partial = next(book for book in scraper.parse_search_results(search_html) if book.source_id == "8471")
+    partial = next(
+        book
+        for book in scraper.parse_search_results(search_html)
+        if book.source_id == "8471"
+    )
 
     enriched = scraper.parse_detail_page(detail_html, partial=partial)
 

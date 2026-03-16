@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -9,7 +10,6 @@ from app.models import SearchResponse, SourceBook
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.services.scrapers.base import BaseMetadataScraper
 from app.utils.text import normalize_match_text
-
 
 logger = logging.getLogger(__name__)
 MINIMUM_RELEVANCE_SCORE = 60.0
@@ -49,7 +49,9 @@ class BookMatchSignals:
         )
 
 
-def score_book_result(book: SourceBook, *, query: str, author: str | None = None) -> float:
+def score_book_result(
+    book: SourceBook, *, query: str, author: str | None = None
+) -> float:
     normalized_query = normalize_match_text(query)
     normalized_title = normalize_match_text(book.title)
     compact_query = _compact_match_text(normalized_query)
@@ -58,7 +60,9 @@ def score_book_result(book: SourceBook, *, query: str, author: str | None = None
     score = 0.0
     if _texts_equivalent(normalized_title, normalized_query):
         score += 100.0
-    elif _text_contains(normalized_title, normalized_query) or _text_contains(compact_title, compact_query):
+    elif _text_contains(normalized_title, normalized_query) or _text_contains(
+        compact_title, compact_query
+    ):
         score += 65.0
     else:
         query_tokens = _split_match_tokens(normalized_query)
@@ -84,11 +88,15 @@ def score_book_result(book: SourceBook, *, query: str, author: str | None = None
     return score
 
 
-def score_candidate(book: SourceBook, *, query: str, author: str | None = None) -> float:
+def score_candidate(
+    book: SourceBook, *, query: str, author: str | None = None
+) -> float:
     return score_book_result(book, query=query, author=author)
 
 
-def build_book_match_signals(book: SourceBook, *, query: str, author: str | None = None) -> BookMatchSignals:
+def build_book_match_signals(
+    book: SourceBook, *, query: str, author: str | None = None
+) -> BookMatchSignals:
     normalized_query = normalize_match_text(query)
     normalized_title = normalize_match_text(book.title)
     compact_query = _compact_match_text(normalized_query)
@@ -125,18 +133,26 @@ def build_book_match_signals(book: SourceBook, *, query: str, author: str | None
     )
 
 
-def filter_book_results(books: Sequence[SourceBook], *, query: str, author: str | None = None) -> list[SourceBook]:
+def filter_book_results(
+    books: Sequence[SourceBook], *, query: str, author: str | None = None
+) -> list[SourceBook]:
     if not books:
         return []
 
-    signals = [build_book_match_signals(book, query=query, author=author) for book in books]
+    signals = [
+        build_book_match_signals(book, query=query, author=author) for book in books
+    ]
 
     strong_title_author_matches = [
-        signal.book for signal in signals if signal.author_match and signal.title_is_strong
+        signal.book
+        for signal in signals
+        if signal.author_match and signal.title_is_strong
     ]
     if strong_title_author_matches:
         exact_title_author_matches = [
-            signal.book for signal in signals if signal.title_exact and signal.author_match
+            signal.book
+            for signal in signals
+            if signal.title_exact and signal.author_match
         ]
         if exact_title_author_matches:
             return exact_title_author_matches
@@ -164,7 +180,9 @@ def filter_book_results(books: Sequence[SourceBook], *, query: str, author: str 
     return list(books)
 
 
-def sort_book_results(books: Sequence[SourceBook], *, query: str, author: str | None = None) -> list[SourceBook]:
+def sort_book_results(
+    books: Sequence[SourceBook], *, query: str, author: str | None = None
+) -> list[SourceBook]:
     return sorted(
         books,
         key=lambda book: (
@@ -185,19 +203,27 @@ def _compact_match_text(value: str) -> str:
 
 
 def _texts_equivalent(left: str, right: str) -> bool:
-    return bool(left) and bool(right) and (left == right or _compact_match_text(left) == _compact_match_text(right))
+    return (
+        bool(left)
+        and bool(right)
+        and (left == right or _compact_match_text(left) == _compact_match_text(right))
+    )
 
 
 def _text_contains(container: str, candidate: str) -> bool:
     return bool(container) and bool(candidate) and candidate in container
 
 
-def _token_overlap_count(query_tokens: Sequence[str], candidate_tokens: Sequence[str]) -> int:
+def _token_overlap_count(
+    query_tokens: Sequence[str], candidate_tokens: Sequence[str]
+) -> int:
     candidate_token_set = {token for token in candidate_tokens if token}
     return len([token for token in query_tokens if token in candidate_token_set])
 
 
-def _token_coverage(query_tokens: Sequence[str], candidate_tokens: Sequence[str]) -> float:
+def _token_coverage(
+    query_tokens: Sequence[str], candidate_tokens: Sequence[str]
+) -> float:
     if not query_tokens:
         return 0.0
     overlap = _token_overlap_count(query_tokens, candidate_tokens)
@@ -221,20 +247,29 @@ class MetadataProviderService:
         aggregated: list[SourceBook] = []
         failures: list[UpstreamFetchError] = []
 
-        for scraper in self._scrapers:
-            try:
-                aggregated.extend(await scraper.search(query=query, author=author))
-            except UpstreamFetchError as exc:
-                failures.append(exc)
+        results = await asyncio.gather(
+            *(scraper.search(query=query, author=author) for scraper in self._scrapers),
+            return_exceptions=True,
+        )
+
+        for scraper, result in zip(self._scrapers, results, strict=True):
+            if isinstance(result, UpstreamFetchError):
+                failures.append(result)
                 logger.warning(
                     "provider.search_failed",
                     extra={
                         "scraper": scraper.source_name,
-                        "url": exc.url,
-                        "timeout_seconds": exc.timeout_seconds,
-                        "reason": exc.reason,
+                        "url": result.url,
+                        "timeout_seconds": result.timeout_seconds,
+                        "reason": result.reason,
                     },
                 )
+                continue
+
+            if isinstance(result, Exception):
+                raise result
+
+            aggregated.extend(result)
 
         if not aggregated and failures:
             raise UpstreamUnavailableError("upstream source unavailable")
@@ -244,30 +279,37 @@ class MetadataProviderService:
         enriched = await self._enrich_top_results(filtered)
         deduplicated = self._deduplicate(enriched)
         sorted_results = sort_book_results(deduplicated, query=query, author=author)
-        filtered_results = filter_book_results(sorted_results, query=query, author=author)
+        filtered_results = filter_book_results(
+            sorted_results, query=query, author=author
+        )
 
         logger.info(
             "provider.search_complete",
-            extra={"query": query, "author_provided": bool(author), "matches": len(filtered_results)},
+            extra={
+                "query": query,
+                "author_provided": bool(author),
+                "matches": len(filtered_results),
+            },
         )
 
         return self._normalizer.normalize_many(filtered_results)
 
-    async def _enrich_top_results(self, books: Sequence[SourceBook]) -> list[SourceBook]:
-        enriched_books: list[SourceBook] = []
-
-        for index, book in enumerate(books):
-            if index >= self._detail_enrichment_limit or not self._needs_detail_enrichment(book):
-                enriched_books.append(book)
-                continue
+    async def _enrich_top_results(
+        self, books: Sequence[SourceBook]
+    ) -> list[SourceBook]:
+        async def enrich_one(index: int, book: SourceBook) -> SourceBook:
+            if (
+                index >= self._detail_enrichment_limit
+                or not self._needs_detail_enrichment(book)
+            ):
+                return book
 
             scraper = self._scrapers_by_name.get(book.source)
             if scraper is None:
-                enriched_books.append(book)
-                continue
+                return book
 
             try:
-                enriched_books.append(await scraper.enrich(book))
+                return await scraper.enrich(book)
             except UpstreamFetchError as exc:
                 logger.warning(
                     "provider.detail_enrichment_failed",
@@ -278,9 +320,13 @@ class MetadataProviderService:
                         "reason": exc.reason,
                     },
                 )
-                enriched_books.append(book)
+                return book
 
-        return enriched_books
+        return list(
+            await asyncio.gather(
+                *(enrich_one(index, book) for index, book in enumerate(books))
+            )
+        )
 
     def _needs_detail_enrichment(self, book: SourceBook) -> bool:
         return any(

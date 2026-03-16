@@ -367,3 +367,7 @@ When implementing a scraper, actively inspect the live HTML structure or embedde
 ## Audiobookshelf
 
 - <https://github.com/advplyr/audiobookshelf>
+
+## Async code
+
+- write async code - so the scrappers run in parallel, not sequentially
