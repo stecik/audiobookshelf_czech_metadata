@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:8000/palmknihy/search?query=Praskl%C3%A9%20zrcadlo&author=Agatha%20Christie
+method: GET
+queryParams:
+  query: Praskl%C3%A9%20zrcadlo
+  author: Agatha%20Christie
+order: 9000

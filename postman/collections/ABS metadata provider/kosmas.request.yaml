@@ -1,0 +1,6 @@
+$kind: http-request
+url: http://localhost:8000/kosmas/search?query=1984
+method: GET
+queryParams:
+  query: "1984"
+order: 8000

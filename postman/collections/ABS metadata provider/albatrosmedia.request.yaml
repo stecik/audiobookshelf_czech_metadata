@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:8000/albatrosmedia/search?query=Podzimn%C3%AD%20d%C4%9Bsy&author=Agatha%20Christie
+method: GET
+queryParams:
+  query: Podzimn%C3%AD%20d%C4%9Bsy
+  author: Agatha%20Christie
+order: 6000

@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:8000/rozhlas/search?query=Sko%C5%99%C3%A1pka&author=Ian%20McEwan
+method: GET
+queryParams:
+  query: Sko%C5%99%C3%A1pka
+  author: Ian%20McEwan
+order: 14000

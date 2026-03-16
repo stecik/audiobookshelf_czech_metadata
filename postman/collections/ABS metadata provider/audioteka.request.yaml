@@ -1,0 +1,6 @@
+$kind: http-request
+url: http://localhost:8000/audioteka/search?query=DNA
+method: GET
+queryParams:
+  query: DNA
+order: 5000

@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:8000/naposlech/search?query=%C5%A0ikm%C3%BD%20kostel&author=Karin%20Lednick%C3%A1
+method: GET
+queryParams:
+  query: "%C5%A0ikm%C3%BD%20kostel"
+  author: Karin%20Lednick%C3%A1
+order: 16000

@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:8000/o2knihovna/search?query=1984&author=George%20Orwell
+method: GET
+queryParams:
+  query: "1984"
+  author: George%20Orwell
+order: 11000

@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:8000/progresguru/search?query=Okam%C5%BEit%C3%A1%20pomoc%20proti%20%C3%BAzkosti&author=Matthew%20McKay
+method: GET
+queryParams:
+  query: Okam%C5%BEit%C3%A1%20pomoc%20proti%20%C3%BAzkosti
+  author: Matthew%20McKay
+order: 7000
