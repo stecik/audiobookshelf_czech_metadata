@@ -26,13 +26,22 @@ def make_provider_service_dependency(state_key: str):
 
 get_provider_service = make_provider_service_dependency("provider_service")
 provider_service_dependencies = {
+    "alza": make_provider_service_dependency("provider_service_alza"),
     "albatrosmedia": make_provider_service_dependency("provider_service_albatrosmedia"),
     "audiolibrix": make_provider_service_dependency("provider_service_audiolibrix"),
     "audioteka": make_provider_service_dependency("provider_service_audioteka"),
+    "kanopa": make_provider_service_dependency("provider_service_kanopa"),
+    "knihydobrovsky": make_provider_service_dependency("provider_service_knihydobrovsky"),
     "kosmas": make_provider_service_dependency("provider_service_kosmas"),
+    "luxor": make_provider_service_dependency("provider_service_luxor"),
+    "megaknihy": make_provider_service_dependency("provider_service_megaknihy"),
+    "naposlech": make_provider_service_dependency("provider_service_naposlech"),
     "onehotbook": make_provider_service_dependency("provider_service_onehotbook"),
+    "o2knihovna": make_provider_service_dependency("provider_service_o2knihovna"),
     "palmknihy": make_provider_service_dependency("provider_service_palmknihy"),
     "progresguru": make_provider_service_dependency("provider_service_progresguru"),
+    "radioteka": make_provider_service_dependency("provider_service_radioteka"),
+    "rozhlas": make_provider_service_dependency("provider_service_rozhlas"),
 }
 
 

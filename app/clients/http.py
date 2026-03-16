@@ -30,6 +30,10 @@ class HttpClient:
             },
         )
 
+    @property
+    def timeout_seconds(self) -> float:
+        return self._timeout_seconds
+
     async def get_text(
         self,
         url: str,

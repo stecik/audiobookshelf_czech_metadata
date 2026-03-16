@@ -153,6 +153,34 @@ Date: 2026-03-15
 - No public JSON search API was required for v1 because the audiobook search page is server-rendered and already contains the needed result data.
 - No browser automation is required for the current Kosmas implementation.
 
+# Luxor Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed search path
+
+- The public `https://www.luxor.cz/c/10726/audioknihy` route is an Angular shell and is not useful on its own for static scraping.
+- The Luxor storefront uses the first-party `https://www.luxor.cz/api/luigis/search` endpoint for search, with the request encoded as URL-escaped base64 of UTF-8 JSON under the `params` query key.
+- Live inspection confirmed the request serializer is effectively `encodeURIComponent(base64(JSON.stringify(payload)))`.
+
+## Search payload structure
+
+- Search results live at `payload.products.products`, with the useful product data in each item's first `variants[0]` object.
+- Audiobook download variants use product type `017`, and audiobook CD variants use `022`.
+- Adding assortment filters `31` (`Audioknihy ke stažení`) and `20` (`Audioknihy na CD`) reduces search noise substantially while keeping the expected audiobook matches for `1984`.
+- The search payload already exposes title, subtitle, producer name, author list, fallback `staticAuthor`, annotation text, image path, `seoUrl`, category breadcrumbs, nearest category, and occasional `releaseDate`.
+
+## Supporting startup config
+
+- Luxor's startup config from `GET /api/lang?dcb=https%3A%2F%2Fwww.luxor.cz` exposes `ImageServer=https://img.luxor.cz`.
+- Cover thumbnails work via paths like `https://img.luxor.cz/suggest/222/351/<imagePath>`.
+
+## Detail-page reliability
+
+- Live detail URLs such as `https://www.luxor.cz/v/1963003/1984` currently return only the Angular shell HTML from static requests.
+- The inspected shell response did not include stable server-rendered title, narrator, duration, or structured product JSON.
+- Current Luxor implementation should therefore stay conservative and rely on the search payload instead of attempting fragile detail-page enrichment.
+
 # ProgresGuru Site Inspection
 
 Date: 2026-03-15
@@ -208,3 +236,223 @@ Date: 2026-03-15
 
 - Live inspection showed one audiobook detail page whose description block and JSON-LD description appeared to belong to a different title.
 - The current implementation therefore enriches Palmknihy results with publisher, genres, language, duration, and publish year, but intentionally leaves `description` unset until a more reliable source is identified.
+
+# Megaknihy Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed search path
+
+- The public storefront search form submits a GET request to `https://www.megaknihy.cz/vyhledavani`.
+- The working search parameters are `orderby=position`, `orderway=desc`, and `search_query=<title>`.
+- Live inspection showed that title-only upstream queries are more predictable than mixing author text into the Megaknihy search string, so author matching is left to provider-layer ranking.
+
+## Search result structure
+
+- Search results are server-rendered under `#product_list > li.ajax_block_product`.
+- Result title links render in `h2 a[title]`, and the `title` attribute avoids storefront prefixes such as `E-kniha:`.
+- Product IDs are available on the wishlist control via `data-product-id`.
+- Search pages also embed a `var gtm = {...}` analytics payload containing product IDs, category names, author arrays, and the `manufacturer` value.
+- Megaknihy search is not audiobook-only, so audiobook filtering needs multiple signals. The current scraper keeps results when at least one strong audio signal is present, such as:
+  - detail URLs under `/audioknihy/`
+  - `CD / DVD` ribbons on the result card
+  - audio-oriented title markers like `audiokniha`, `CDmp3`, or `Čte ...`
+  - embedded analytics categories such as `Audioknihy`, `Zvukové`, or `Mluvené slovo`
+- Ebook ribbons such as `E-kniha` are explicitly excluded.
+
+## Detail page structure
+
+- Detail pages are server-rendered and include a `Product` JSON-LD block with `sku`, `image`, `name`, and rich HTML `description`.
+- The static detail table under `#product_details li` exposes `Výrobce`, `Rok vydání`, `Jazyk`, `Vazba`, and `EAN`.
+- Product tags render in `#product-tags-cont .product-tag` and provide usable genre hints after filtering out generic media tags plus author, publisher, and title tags.
+- Narrator data is not consistently exposed in a dedicated field, but some titles explicitly include narrator text inside the title, for example `(Čte Lukáš Hlavica)`.
+
+## Reliability notes
+
+- Because search is global storefront search, exact title queries perform best and reduce noise from print books, ebooks, and other media.
+- Detail pages provide reliable description, cover, publisher-like manufacturer, language, and publish-year data, but duration is not consistently exposed on the inspected page, so the scraper leaves it unset when absent.
+
+# Naposlech Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed search path
+
+- The homepage advertises a `SearchAction` target of `https://naposlech.cz/?s={search_term_string}`.
+- The cleaner implementation path is the WordPress REST endpoint `https://naposlech.cz/wp-json/wp/v2/audiokniha?search=...&per_page=10`, which returns only audiobook-profile entries for the custom `audiokniha` post type.
+- Live inspection showed that title-only upstream queries are the safest default. Author names are exposed reliably on detail pages, not in the API search payload.
+
+## Search result structure
+
+- REST search results are JSON arrays of `audiokniha` objects with `id`, `link`, `title.rendered`, `excerpt.rendered`, `featured_media`, and `zanr-audioknih`.
+- The API avoids the HTML search page's mixed result set of audiobook profiles, articles, topics, and other content types.
+- Search result descriptions can be taken from `excerpt.rendered`, which is already short and audiobook-specific.
+
+## Detail page structure
+
+- Detail pages are server-rendered and do not require JavaScript execution.
+- Title selector: `h1.elementor-heading-title`
+- Cover selector: `.elementor-widget-theme-post-featured-image img`, with `meta[property='og:image']` as a fallback.
+- Long description selector: `.elementor-widget-theme-post-content .elementor-widget-container`
+- Rich metadata rows render in `.npslch-columns .pair` blocks.
+- Confirmed labels on the live `1984` page: `Délka`, `Autor`, `Interpret`, `Rok vydání`, `Vydavatel`, and `Žánry audioknih`.
+
+## Reliability notes
+
+- The REST search payload does not expose author, narrator, publisher, duration, or audiobook release year as first-class fields.
+- Those fields are reliably available on the detail page, so the current implementation is API-first for discovery and detail-page HTML parsing for enrichment.
+- The long description block includes a trailing `text: <publisher>` attribution that should be stripped from the returned description while still allowing it to serve as a conservative publisher fallback when the dedicated metadata field is absent.
+
+# Kanopa Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed search path
+
+- The public storefront search form submits a GET request to `https://www.kanopa.cz/vyhledavani/?string=...`.
+- Live inspection confirmed that combined title-plus-author queries such as `Hypotéza zla Donato Carrisi` still return the expected product match.
+
+## Search result structure
+
+- Search results are server-rendered Shoptet product cards under `#products .p[data-micro="product"]`.
+- Result title links render as `a.name[data-micro="url"]`.
+- Product IDs are available on the card wrapper via `data-micro-product-id`.
+- Covers can be read from the result image `data-micro-image` attribute.
+- Search cards expose visual flags such as `Tip` and `MP3`, but do not expose author or narrator metadata.
+
+## Detail page structure
+
+- Detail pages are server-rendered and do not require JavaScript execution.
+- Title selector: `.p-detail-inner-header h1`
+- Long description selector: `#description .basic-description`
+- Cover selector: `.p-main-image img`
+- Extended metadata rows render under `.extended-description .detail-parameters tr`.
+- Confirmed labels on the live `Hypotéza zla` page: `Autor`, `Délka`, `Interpret`, `Série`, `Žánr`, `ISBN`, `Překlad`, and `Vydavatel`.
+
+## Reliability notes
+
+- The inspected detail page did not expose an explicit publish-year field, so the current scraper only maps a year when a detail row such as `Rok vydání` or `Datum vydání` is present.
+- Because search cards lack author metadata, upstream author filtering is best-effort and final author-aware ranking improves after detail enrichment.
+
+# Radioteka Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed search path
+
+- The public storefront search form submits a GET request to `https://www.radioteka.cz/hledani?q=...`.
+- Search responses are server-rendered HTML grouped by content type such as `Mluvené slovo` and `Noty`.
+
+## Search result structure
+
+- Audiobook cards render as `article.item` blocks.
+- Audiobook matches are reliably identifiable by the add-to-cart control having `data-provider="croslovo"`.
+- Search cards expose stable `data-ident`, `data-title`, `data-brand`, and `data-categories` attributes on the add-to-cart button.
+- Title and detail link are available under `.item__tit a`, and cover images use `.item__img img` with `data-src`.
+
+## Detail page structure
+
+- Detail pages are server-rendered and do not require JavaScript execution.
+- Title selector: `h1.detail__tit`
+- Description selector: `.detail-center-col .detail__desc`
+- Metadata is stored in repeated `dl.detail__info` blocks containing labels for `Rok vydání`, `Vydavatel`, `Celková délka`, `Autor knihy`, and `Interpret slova`.
+- Cover images are available in `meta[name='og:image']` and as a fallback under `.detail-left-col img`.
+
+## Reliability notes
+
+- Search cards do not consistently expose author names, so the scraper keeps the upstream query title-only and relies on detail enrichment for top-ranked exact-title matches.
+- Duration is exposed as `HH:MM:SS`, which required a shared parser improvement to normalize the value into minutes.
+
+# Knihy Dobrovsky Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed search path
+
+- The public storefront search form submits a GET request to `https://www.knihydobrovsky.cz/vyhledavani?search=...`.
+- Search responses are server-rendered HTML and do not require JavaScript execution.
+
+## Search result structure
+
+- Result cards render as `li[data-cy="productPreviewList"]`.
+- Global search mixes print books, ebooks, and audiobooks, so audiobook filtering is required.
+- Audiobook detail URLs use `/audiokniha...` paths such as `/audiokniha-mp3/1984-343519887`.
+- Card title selector: `h3.title .name`
+- Card author selector: `.content .author-name`
+- Card cover selector: `h3.title img`
+- Non-Czech variants can show a language icon under `.product-language__inner`, for example `ico-sk`.
+
+## Detail page structure
+
+- Title selector: `h1 [itemprop="name"]`
+- Primary author / narrator groups render in `.annot.with-cols .author .group`.
+- Product parameters render in static HTML under `.box-book-info .item dl`.
+- Sidebar metadata render in `.box-params > dl`, including `kategorie`, `Témata`, and `interpreti`.
+- Useful labels confirmed on a live audiobook page: `Nakladatel`, `datum vydání`, `jazyk`, and `Délka`.
+- Detail pages also embed a `Product` JSON-LD block with cover image, long description, publisher brand, and category path.
+
+## Reliability notes
+
+- Search is storefront-wide rather than audiobook-only, so the scraper should keep only `/audiokniha` detail URLs.
+- `data-productinfo` on result cards looks JavaScript-like rather than strict JSON, so DOM parsing is the safer first-choice implementation path for this source.
+
+# Rozhlas Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed search path
+
+- The topic page `https://temata.rozhlas.cz/hry-a-cetba` exposes a server-rendered GET filter on the same URL.
+- The query input uses the `combine` parameter, for example `https://temata.rozhlas.cz/hry-a-cetba?combine=skořápka`.
+- Live checks showed that some title-plus-author combinations can over-filter to zero results, so the scraper falls back to title-only upstream search when a combined query misses.
+
+## Search result structure
+
+- Result cards render under `.b-008d__list > .b-008d__list-item`.
+- Card titles live in `.b-008d__subblock--content h3 a`, teaser text in `.b-008d__subblock--content p`, and metadata rows in `.b-008d__meta-line`.
+- Search cards expose either `Délka audia`, `Autor`, or `Počet epizod`.
+- Genre-like badges render as `.b-008d__block--image .tag span`.
+- Covers are exposed through `picture source[data-srcset]`, while the `img` element is usually just a lazy-load placeholder.
+
+## Detail page structure
+
+- Detail pages live on multiple Czech Radio station subdomains such as `junior.rozhlas.cz`, `vltava.rozhlas.cz`, and `dvojka.rozhlas.cz`.
+- Pages expose a shared embedded `mujRozhlasPlayer` payload in `div.mujRozhlasPlayer[data-player]`.
+- The player payload contains poster artwork and a `playlist` array with per-episode durations, which works for both single-audio pages and multi-episode serial pages.
+- Credits are stored in a shared Drupal block under `.asset.a-002 .a-002__row`, where performer names and production years can be parsed from label/value lines.
+- Multi-work serial pages often expose author headings inside the credits block as `<strong>Author: Title</strong>`.
+
+## Reliability notes
+
+- Detail-page `dataLayer` is useful for bundle/type detection and genre hints, but `contentAuthor` is not always the literary author. On serial pages it can instead represent an editor or preparer, so author extraction must stay conservative.
+- Multi-work serial pages can contain mixed production years, so the scraper uses a single `publishedYear` only when the page is unambiguous or falls back to the page publication year.
+
+# Alza Site Inspection
+
+Date: 2026-03-16
+
+## Confirmed entry points
+
+- Category landing page: `https://www.alza.cz/media/audioknihy/18854370.htm`
+- Storefront search route: `https://www.alza.cz/search.htm?exps=...`
+- Mobile fallback route: `https://m.alza.cz/search.htm?exps=...`
+
+## Search result structure
+
+- Product detail URLs use `/media/<slug>-d<id>.htm`.
+- Search and category result cards expose audiobook summary text in human-readable lines such as `Audiokniha MP3 - autor ...`, sometimes with an extra description segment before `autor`.
+- Order codes render as `Objednací kód: ...`, which is useful as a fallback identifier if the detail id is missing.
+- A text-first parser is safer here than brittle CSS selectors because Alza reuses generic product-search markup.
+
+## Detail page structure
+
+- Detail pages expose enough metadata through generic HTML primitives to avoid source-specific selectors:
+  - `<h1>` for the title
+  - Open Graph tags for canonical URL and cover image
+  - visible labeled fields such as `Autor`, `Čte`, `Interpret`, `Jazyk`, `Rok vydání`, `Délka`, and `Kategorie`
+  - publisher hints through `Vše od <publisher>` or the `Informace o výrobci` block
+
+## Reliability notes
+
+- Raw HTTP requests from this development environment currently receive a Cloudflare `Just a moment...` challenge on both desktop and mobile hosts.
+- The implementation therefore detects challenge pages explicitly, logs them as upstream unavailability, and keeps the parser text-oriented so the source can still work in environments where Alza allows the requests through.

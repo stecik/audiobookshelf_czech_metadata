@@ -16,14 +16,23 @@ from app.routers.search import (
 )
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.services.provider import MetadataProviderService
+from app.services.scrapers.alza import AlzaScraper
 from app.services.scrapers.albatrosmedia import AlbatrosMediaScraper
-from app.services.scrapers.kosmas import KosmasScraper
-from app.services.scrapers.audioteka import AudiotekaScraper
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
+from app.services.scrapers.audioteka import AudiotekaScraper
 from app.services.scrapers.base import BaseMetadataScraper
+from app.services.scrapers.kanopa import KanopaScraper
+from app.services.scrapers.knihydobrovsky import KnihyDobrovskyScraper
+from app.services.scrapers.kosmas import KosmasScraper
+from app.services.scrapers.luxor import LuxorScraper
+from app.services.scrapers.megaknihy import MegaknihyScraper
+from app.services.scrapers.naposlech import NaposlechScraper
 from app.services.scrapers.onehotbook import OneHotBookScraper
+from app.services.scrapers.o2knihovna import O2KnihovnaScraper
 from app.services.scrapers.palmknihy import PalmknihyScraper
 from app.services.scrapers.progresguru import ProgresGuruScraper
+from app.services.scrapers.radioteka import RadiotekaScraper
+from app.services.scrapers.rozhlas import RozhlasScraper
 from app.utils.logging import configure_logging
 
 
@@ -33,20 +42,38 @@ logger = logging.getLogger(__name__)
 def build_scrapers(*, settings: Settings, http_client: HttpClient) -> dict[str, BaseMetadataScraper]:
     scrapers: dict[str, BaseMetadataScraper] = {}
 
+    if settings.enable_alza:
+        scrapers["alza"] = AlzaScraper(http_client=http_client)
     if settings.enable_albatrosmedia:
         scrapers["albatrosmedia"] = AlbatrosMediaScraper(http_client=http_client)
     if settings.enable_audiolibrix:
         scrapers["audiolibrix"] = AudiolibrixScraper(http_client=http_client)
     if settings.enable_audioteka:
         scrapers["audioteka"] = AudiotekaScraper(http_client=http_client)
+    if settings.enable_kanopa:
+        scrapers["kanopa"] = KanopaScraper(http_client=http_client)
+    if settings.enable_knihydobrovsky:
+        scrapers["knihydobrovsky"] = KnihyDobrovskyScraper(http_client=http_client)
     if settings.enable_kosmas:
         scrapers["kosmas"] = KosmasScraper(http_client=http_client)
+    if settings.enable_luxor:
+        scrapers["luxor"] = LuxorScraper(http_client=http_client)
+    if settings.enable_megaknihy:
+        scrapers["megaknihy"] = MegaknihyScraper(http_client=http_client)
+    if settings.enable_naposlech:
+        scrapers["naposlech"] = NaposlechScraper(http_client=http_client)
     if settings.enable_onehotbook:
         scrapers["onehotbook"] = OneHotBookScraper(http_client=http_client)
+    if settings.enable_o2knihovna:
+        scrapers["o2knihovna"] = O2KnihovnaScraper(http_client=http_client)
     if settings.enable_palmknihy:
         scrapers["palmknihy"] = PalmknihyScraper(http_client=http_client)
     if settings.enable_progresguru:
         scrapers["progresguru"] = ProgresGuruScraper(http_client=http_client)
+    if settings.enable_radioteka:
+        scrapers["radioteka"] = RadiotekaScraper(http_client=http_client)
+    if settings.enable_rozhlas:
+        scrapers["rozhlas"] = RozhlasScraper(http_client=http_client)
 
     return scrapers
 

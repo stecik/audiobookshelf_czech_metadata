@@ -1,0 +1,35 @@
+[
+  {
+    "id": 107223,
+    "type": "audiokniha",
+    "link": "https://naposlech.cz/audiokniha/1984-4-2/",
+    "title": {
+      "rendered": "1984"
+    },
+    "excerpt": {
+      "rendered": "<p>Ve zbídačelém Londýně na území superstátu Oceánie se v dubnu 1984 úředník Ministerstva pravdy Winston Smith přiměje vzepřít.</p>"
+    }
+  },
+  {
+    "id": 107225,
+    "type": "audiokniha",
+    "link": "https://naposlech.cz/audiokniha/1984-5-2/",
+    "title": {
+      "rendered": "1984"
+    },
+    "excerpt": {
+      "rendered": "<p>Nové vydanie jedného z najznámejších diel svetovej literatúry.</p>"
+    }
+  },
+  {
+    "id": 107224,
+    "type": "audiokniha",
+    "link": "https://naposlech.cz/audiokniha/1984-3-2/",
+    "title": {
+      "rendered": "1984"
+    },
+    "excerpt": {
+      "rendered": "<p>Antiutopický román 1984, jedno z nejvýznamnějších literárních děl 20. století.</p>"
+    }
+  }
+]

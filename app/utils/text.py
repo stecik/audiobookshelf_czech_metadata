@@ -12,7 +12,10 @@ TITLE_PREFIX_RE = re.compile(r"^(audiokniha|audiobook|hoerebuch|hörbuch)\s+", r
 NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 HOUR_MINUTE_RE = re.compile(r"(?P<hours>\d+)\s*:\s*(?P<minutes>\d+)\s*h", re.IGNORECASE)
-VERBOSE_HOURS_RE = re.compile(r"(?P<hours>\d+)\s*(?:hod(?:ina|iny|in)?|hod\.?|hours?)\b", re.IGNORECASE)
+HOUR_MINUTE_SECOND_RE = re.compile(
+    r"\b(?P<hours>\d+)\s*:\s*(?P<minutes>\d{1,2})\s*:\s*(?P<seconds>\d{2})\b"
+)
+VERBOSE_HOURS_RE = re.compile(r"(?P<hours>\d+)\s*(?:h\b|hod(?:ina|iny|in)?|hod\.?|hours?)", re.IGNORECASE)
 VERBOSE_MINUTES_RE = re.compile(r"(?P<minutes>\d+)\s*(?:min(?:uta|uty|ut)?|min\.?|minutes?)\b", re.IGNORECASE)
 MINUTE_RE = re.compile(r"(?P<minutes>\d+)\s*(min|minut|minuty|minutes?)\b", re.IGNORECASE)
 ISO_8601_DURATION_RE = re.compile(r"^PT(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?$", re.IGNORECASE)
@@ -85,6 +88,14 @@ def parse_duration_to_minutes(text: str | None) -> int | None:
         hours = int(hour_match.group("hours"))
         minutes = int(hour_match.group("minutes"))
         return (hours * 60) + minutes
+
+    hour_minute_second_match = HOUR_MINUTE_SECOND_RE.search(normalized)
+    if hour_minute_second_match:
+        hours = int(hour_minute_second_match.group("hours"))
+        minutes = int(hour_minute_second_match.group("minutes"))
+        seconds = int(hour_minute_second_match.group("seconds"))
+        total_seconds = (hours * 3600) + (minutes * 60) + seconds
+        return max(1, round(total_seconds / 60))
 
     verbose_hours_match = VERBOSE_HOURS_RE.search(normalized)
     verbose_minutes_match = VERBOSE_MINUTES_RE.search(normalized)

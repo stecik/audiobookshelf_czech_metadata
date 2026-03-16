@@ -67,12 +67,183 @@ def test_source_specific_search_endpoint_returns_matches_with_dependency_overrid
     }
 
 
+def test_alza_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["alza"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/alza/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_kanopa_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["kanopa"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/kanopa/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_knihydobrovsky_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["knihydobrovsky"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/knihydobrovsky/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_luxor_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["luxor"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/luxor/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_megaknihy_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["megaknihy"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/megaknihy/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_naposlech_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["naposlech"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/naposlech/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
 def test_palmknihy_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
     app = create_app()
     app.dependency_overrides[provider_service_dependencies["palmknihy"]] = lambda: StubProviderService()
 
     with TestClient(app) as client:
         response = client.get("/palmknihy/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_o2knihovna_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["o2knihovna"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/o2knihovna/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_radioteka_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["radioteka"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/radioteka/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "matches": [
+            {
+                "title": "1984",
+                "author": "George Orwell",
+                "narrator": "David Novotný",
+            }
+        ]
+    }
+
+
+def test_rozhlas_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["rozhlas"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/rozhlas/search", params={"query": "Skořápka"})
 
     assert response.status_code == 200
     assert response.json() == {
