@@ -43,13 +43,9 @@ SEARCH_CHECKS: tuple[SearchCheck, ...] = (
         author="George Orwell",
         expected_title="1984",
     ),
-    SearchCheck(
-        name="alza search",
-        path="/alza/search",
-        query="1984",
-        author="George Orwell",
-        expected_title="1984",
-    ),
+    # Alza is intentionally excluded from the scheduled GitHub Actions smoke checks
+    # because GitHub-hosted runner IPs intermittently trigger upstream anti-bot
+    # responses even when the scraper works from local/manual clients.
     SearchCheck(
         name="albatrosmedia search",
         path="/albatrosmedia/search",
