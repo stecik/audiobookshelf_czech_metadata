@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.clients.http import HttpClient
 from app.config import Settings
+from app.openapi import OPENAPI_DESCRIPTION, OPENAPI_SERVERS, OPENAPI_TAGS, OPENAPI_TITLE
 from app.routers.search import create_provider_router, provider_service_dependencies
 from app.routers.search import router as search_router
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
@@ -124,8 +125,11 @@ def create_app() -> FastAPI:
         await http_client.aclose()
 
     app = FastAPI(
-        title="Czech Audiobookshelf Metadata Provider",
+        title=OPENAPI_TITLE,
+        description=OPENAPI_DESCRIPTION,
         version="0.1.0",
+        servers=OPENAPI_SERVERS,
+        openapi_tags=OPENAPI_TAGS,
         lifespan=lifespan,
     )
 

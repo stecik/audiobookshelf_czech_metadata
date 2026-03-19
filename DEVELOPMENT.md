@@ -58,6 +58,12 @@ Run the tests:
 uv run pytest
 ```
 
+Build the static OpenAPI docs site:
+
+```bash
+uv run python scripts/build_openapi.py
+```
+
 ## Configuration Reference
 
 Application settings:
@@ -73,6 +79,27 @@ SCRAPER_USER_AGENT=
 ```
 
 `REQUEST_TIMEOUT_SECONDS` is the timeout for a single outbound HTTP request. `SCRAPER_TIMEOUT_SECONDS` is the overall timeout for one scraper search or one detail-enrichment task.
+
+## OpenAPI Docs
+
+The API exposes the standard FastAPI OpenAPI endpoints at runtime:
+
+- `GET /openapi.json`
+- `GET /docs`
+
+To generate the static Swagger site for GitHub Pages:
+
+```bash
+uv run python scripts/build_openapi.py
+```
+
+This writes:
+
+- `docs/openapi.json`
+- `docs/index.html`
+- `docs/.nojekyll`
+
+The generated `docs/index.html` loads `./openapi.json` with Swagger UI from a CDN, so it can be published directly from the repository `docs/` directory on GitHub Pages without hardcoding the repo name.
 
 ## How Audiobookshelf Uses It
 

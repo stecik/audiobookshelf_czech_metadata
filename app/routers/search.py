@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Security
+from fastapi.security import APIKeyHeader
 
 from app.config import Settings
 from app.models import HealthResponse, SearchResponse
@@ -11,6 +12,12 @@ from app.services.provider import MetadataProviderService, UpstreamUnavailableEr
 
 
 logger = logging.getLogger(__name__)
+authorization_header_scheme = APIKeyHeader(
+    name="AUTHORIZATION",
+    auto_error=False,
+    scheme_name="AuthorizationHeader",
+    description="Optional shared token. Accepts either the raw token or `Bearer <token>`.",
+)
 
 
 def get_settings(request: Request) -> Settings:
@@ -57,7 +64,7 @@ def _authorization_matches(*, expected: str, provided: str | None) -> bool:
 
 async def require_shared_token(
     settings: Annotated[Settings, Depends(get_settings)],
-    authorization: Annotated[str | None, Header()] = None,
+    authorization: Annotated[str | None, Security(authorization_header_scheme)] = None,
 ) -> None:
     if settings.audiobookshelf_auth_token is None:
         return
@@ -73,7 +80,14 @@ def create_provider_router(
 ) -> APIRouter:
     router = APIRouter()
 
-    @router.get("/health", response_model=HealthResponse, name=f"{provider_name}_health")
+    @router.get(
+        "/health",
+        response_model=HealthResponse,
+        tags=[provider_name],
+        summary=f"{provider_name} health check",
+        description=f"Health endpoint for the `{provider_name}` provider scope.",
+        name=f"{provider_name}_health",
+    )
     async def health() -> HealthResponse:
         return HealthResponse(status="ok")
 
@@ -82,6 +96,18 @@ def create_provider_router(
         response_model=SearchResponse,
         response_model_exclude_none=True,
         dependencies=[Depends(require_shared_token)],
+        tags=[provider_name],
+        summary=f"{provider_name} metadata search",
+        description=(
+            "Search for metadata matches using Audiobookshelf-compatible query parameters. "
+            "The global provider searches all globally enabled sources, while source-specific "
+            "providers search only their own upstream."
+        ),
+        responses={
+            401: {"description": "Missing or invalid shared token."},
+            422: {"description": "Invalid query string."},
+            502: {"description": "All upstream requests for this provider failed."},
+        },
         name=f"{provider_name}_search",
     )
     async def search(

@@ -1,0 +1,1985 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Czech Audiobookshelf Metadata Provider",
+    "description": "Custom metadata provider API for Audiobookshelf. It exposes a global search endpoint across enabled sources and source-specific search endpoints for individual storefronts.",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development"
+    },
+    {
+      "url": "http://provider:8000",
+      "description": "Docker network service name"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "global"
+        ],
+        "summary": "global health check",
+        "description": "Health endpoint for the `global` provider scope.",
+        "operationId": "global_health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search": {
+      "get": {
+        "tags": [
+          "global"
+        ],
+        "summary": "global metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "global_search_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/alza/health": {
+      "get": {
+        "tags": [
+          "alza"
+        ],
+        "summary": "alza health check",
+        "description": "Health endpoint for the `alza` provider scope.",
+        "operationId": "alza_health_alza_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alza/search": {
+      "get": {
+        "tags": [
+          "alza"
+        ],
+        "summary": "alza metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "alza_search_alza_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/albatrosmedia/health": {
+      "get": {
+        "tags": [
+          "albatrosmedia"
+        ],
+        "summary": "albatrosmedia health check",
+        "description": "Health endpoint for the `albatrosmedia` provider scope.",
+        "operationId": "albatrosmedia_health_albatrosmedia_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/albatrosmedia/search": {
+      "get": {
+        "tags": [
+          "albatrosmedia"
+        ],
+        "summary": "albatrosmedia metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "albatrosmedia_search_albatrosmedia_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/audiolibrix/health": {
+      "get": {
+        "tags": [
+          "audiolibrix"
+        ],
+        "summary": "audiolibrix health check",
+        "description": "Health endpoint for the `audiolibrix` provider scope.",
+        "operationId": "audiolibrix_health_audiolibrix_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audiolibrix/search": {
+      "get": {
+        "tags": [
+          "audiolibrix"
+        ],
+        "summary": "audiolibrix metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "audiolibrix_search_audiolibrix_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/audioteka/health": {
+      "get": {
+        "tags": [
+          "audioteka"
+        ],
+        "summary": "audioteka health check",
+        "description": "Health endpoint for the `audioteka` provider scope.",
+        "operationId": "audioteka_health_audioteka_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audioteka/search": {
+      "get": {
+        "tags": [
+          "audioteka"
+        ],
+        "summary": "audioteka metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "audioteka_search_audioteka_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/databazeknih/health": {
+      "get": {
+        "tags": [
+          "databazeknih"
+        ],
+        "summary": "databazeknih health check",
+        "description": "Health endpoint for the `databazeknih` provider scope.",
+        "operationId": "databazeknih_health_databazeknih_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/databazeknih/search": {
+      "get": {
+        "tags": [
+          "databazeknih"
+        ],
+        "summary": "databazeknih metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "databazeknih_search_databazeknih_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/kanopa/health": {
+      "get": {
+        "tags": [
+          "kanopa"
+        ],
+        "summary": "kanopa health check",
+        "description": "Health endpoint for the `kanopa` provider scope.",
+        "operationId": "kanopa_health_kanopa_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kanopa/search": {
+      "get": {
+        "tags": [
+          "kanopa"
+        ],
+        "summary": "kanopa metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "kanopa_search_kanopa_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/knihydobrovsky/health": {
+      "get": {
+        "tags": [
+          "knihydobrovsky"
+        ],
+        "summary": "knihydobrovsky health check",
+        "description": "Health endpoint for the `knihydobrovsky` provider scope.",
+        "operationId": "knihydobrovsky_health_knihydobrovsky_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knihydobrovsky/search": {
+      "get": {
+        "tags": [
+          "knihydobrovsky"
+        ],
+        "summary": "knihydobrovsky metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "knihydobrovsky_search_knihydobrovsky_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/kosmas/health": {
+      "get": {
+        "tags": [
+          "kosmas"
+        ],
+        "summary": "kosmas health check",
+        "description": "Health endpoint for the `kosmas` provider scope.",
+        "operationId": "kosmas_health_kosmas_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kosmas/search": {
+      "get": {
+        "tags": [
+          "kosmas"
+        ],
+        "summary": "kosmas metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "kosmas_search_kosmas_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/luxor/health": {
+      "get": {
+        "tags": [
+          "luxor"
+        ],
+        "summary": "luxor health check",
+        "description": "Health endpoint for the `luxor` provider scope.",
+        "operationId": "luxor_health_luxor_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/luxor/search": {
+      "get": {
+        "tags": [
+          "luxor"
+        ],
+        "summary": "luxor metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "luxor_search_luxor_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/megaknihy/health": {
+      "get": {
+        "tags": [
+          "megaknihy"
+        ],
+        "summary": "megaknihy health check",
+        "description": "Health endpoint for the `megaknihy` provider scope.",
+        "operationId": "megaknihy_health_megaknihy_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/megaknihy/search": {
+      "get": {
+        "tags": [
+          "megaknihy"
+        ],
+        "summary": "megaknihy metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "megaknihy_search_megaknihy_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/naposlech/health": {
+      "get": {
+        "tags": [
+          "naposlech"
+        ],
+        "summary": "naposlech health check",
+        "description": "Health endpoint for the `naposlech` provider scope.",
+        "operationId": "naposlech_health_naposlech_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/naposlech/search": {
+      "get": {
+        "tags": [
+          "naposlech"
+        ],
+        "summary": "naposlech metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "naposlech_search_naposlech_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/onehotbook/health": {
+      "get": {
+        "tags": [
+          "onehotbook"
+        ],
+        "summary": "onehotbook health check",
+        "description": "Health endpoint for the `onehotbook` provider scope.",
+        "operationId": "onehotbook_health_onehotbook_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/onehotbook/search": {
+      "get": {
+        "tags": [
+          "onehotbook"
+        ],
+        "summary": "onehotbook metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "onehotbook_search_onehotbook_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/o2knihovna/health": {
+      "get": {
+        "tags": [
+          "o2knihovna"
+        ],
+        "summary": "o2knihovna health check",
+        "description": "Health endpoint for the `o2knihovna` provider scope.",
+        "operationId": "o2knihovna_health_o2knihovna_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/o2knihovna/search": {
+      "get": {
+        "tags": [
+          "o2knihovna"
+        ],
+        "summary": "o2knihovna metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "o2knihovna_search_o2knihovna_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/palmknihy/health": {
+      "get": {
+        "tags": [
+          "palmknihy"
+        ],
+        "summary": "palmknihy health check",
+        "description": "Health endpoint for the `palmknihy` provider scope.",
+        "operationId": "palmknihy_health_palmknihy_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/palmknihy/search": {
+      "get": {
+        "tags": [
+          "palmknihy"
+        ],
+        "summary": "palmknihy metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "palmknihy_search_palmknihy_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/progresguru/health": {
+      "get": {
+        "tags": [
+          "progresguru"
+        ],
+        "summary": "progresguru health check",
+        "description": "Health endpoint for the `progresguru` provider scope.",
+        "operationId": "progresguru_health_progresguru_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/progresguru/search": {
+      "get": {
+        "tags": [
+          "progresguru"
+        ],
+        "summary": "progresguru metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "progresguru_search_progresguru_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/radioteka/health": {
+      "get": {
+        "tags": [
+          "radioteka"
+        ],
+        "summary": "radioteka health check",
+        "description": "Health endpoint for the `radioteka` provider scope.",
+        "operationId": "radioteka_health_radioteka_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/radioteka/search": {
+      "get": {
+        "tags": [
+          "radioteka"
+        ],
+        "summary": "radioteka metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "radioteka_search_radioteka_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    },
+    "/rozhlas/health": {
+      "get": {
+        "tags": [
+          "rozhlas"
+        ],
+        "summary": "rozhlas health check",
+        "description": "Health endpoint for the `rozhlas` provider scope.",
+        "operationId": "rozhlas_health_rozhlas_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rozhlas/search": {
+      "get": {
+        "tags": [
+          "rozhlas"
+        ],
+        "summary": "rozhlas metadata search",
+        "description": "Search for metadata matches using Audiobookshelf-compatible query parameters. The global provider searches all globally enabled sources, while source-specific providers search only their own upstream.",
+        "operationId": "rozhlas_search_rozhlas_search_get",
+        "security": [
+          {
+            "AuthorizationHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Audiobookshelf search query",
+              "title": "Query"
+            },
+            "description": "Audiobookshelf search query"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional author filter",
+              "title": "Author"
+            },
+            "description": "Optional author filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid shared token."
+          },
+          "422": {
+            "description": "Invalid query string."
+          },
+          "502": {
+            "description": "All upstream requests for this provider failed."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AudiobookshelfMatch": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Primary title of the matched book or audiobook."
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle",
+            "description": "Subtitle when explicitly exposed by the source."
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author",
+            "description": "Author list rendered as a comma-separated string."
+          },
+          "narrator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrator",
+            "description": "Narrator list rendered as a comma-separated string."
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher",
+            "description": "Publisher or imprint."
+          },
+          "publishedYear": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedyear",
+            "description": "Publication or release year as a string."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Book or audiobook description."
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover",
+            "description": "Absolute URL to the cover image."
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn",
+            "description": "ISBN when explicitly available from the source."
+          },
+          "asin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asin",
+            "description": "ASIN when explicitly available from the source."
+          },
+          "genres": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Genres",
+            "description": "Genre names extracted from the source."
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags",
+            "description": "Additional tags extracted from the source."
+          },
+          "series": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AudiobookshelfSeries"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series",
+            "description": "Series metadata when available."
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language",
+            "description": "Language code, typically `cs`."
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration",
+            "description": "Runtime in minutes."
+          },
+          "matchConfidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matchconfidence",
+            "description": "Match confidence score between 0 and 1, used by Audiobookshelf for certainty badges."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "AudiobookshelfMatch"
+      },
+      "AudiobookshelfSeries": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Series name."
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence",
+            "description": "Series sequence or volume label."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "AudiobookshelfSeries"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Simple health indicator.",
+            "default": "ok"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HealthResponse"
+      },
+      "SearchResponse": {
+        "properties": {
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/AudiobookshelfMatch"
+            },
+            "type": "array",
+            "title": "Matches",
+            "description": "Ordered list of normalized matches returned to Audiobookshelf."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SearchResponse"
+      }
+    },
+    "securitySchemes": {
+      "AuthorizationHeader": {
+        "type": "apiKey",
+        "description": "Optional shared token. Accepts either the raw token or `Bearer <token>`.",
+        "in": "header",
+        "name": "AUTHORIZATION"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "global",
+      "description": "Combined search across globally enabled sources."
+    },
+    {
+      "name": "alza",
+      "description": "Alza audiobook provider endpoints."
+    },
+    {
+      "name": "albatrosmedia",
+      "description": "Albatros Media audiobook provider endpoints."
+    },
+    {
+      "name": "audiolibrix",
+      "description": "Audiolibrix audiobook provider endpoints."
+    },
+    {
+      "name": "audioteka",
+      "description": "Audioteka audiobook provider endpoints."
+    },
+    {
+      "name": "databazeknih",
+      "description": "Databaze knih book-metadata fallback endpoints for custom audiobooks."
+    },
+    {
+      "name": "kanopa",
+      "description": "Kanopa audiobook provider endpoints."
+    },
+    {
+      "name": "knihydobrovsky",
+      "description": "Knihy Dobrovsky audiobook provider endpoints."
+    },
+    {
+      "name": "kosmas",
+      "description": "Kosmas audiobook provider endpoints."
+    },
+    {
+      "name": "luxor",
+      "description": "Luxor audiobook provider endpoints."
+    },
+    {
+      "name": "megaknihy",
+      "description": "Megaknihy audiobook provider endpoints."
+    },
+    {
+      "name": "naposlech",
+      "description": "Naposlech audiobook provider endpoints."
+    },
+    {
+      "name": "onehotbook",
+      "description": "OneHotBook audiobook provider endpoints."
+    },
+    {
+      "name": "o2knihovna",
+      "description": "O2 Knihovna audiobook provider endpoints."
+    },
+    {
+      "name": "palmknihy",
+      "description": "Palmknihy audiobook provider endpoints."
+    },
+    {
+      "name": "progresguru",
+      "description": "ProgresGuru audiobook provider endpoints."
+    },
+    {
+      "name": "radioteka",
+      "description": "Radioteka audiobook provider endpoints."
+    },
+    {
+      "name": "rozhlas",
+      "description": "Rozhlas audio and radio-drama provider endpoints."
+    }
+  ]
+}
