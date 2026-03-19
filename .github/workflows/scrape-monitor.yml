@@ -12,6 +12,8 @@ concurrency:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    environment:
+      name: monitoring
     env:
       UV_CACHE_DIR: .uv-cache
       SMTP_CONNECTION_URL: ${{ secrets.SMTP_CONNECTION_URL }}
