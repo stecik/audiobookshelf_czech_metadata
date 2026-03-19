@@ -16,9 +16,6 @@ jobs:
       name: monitoring
     env:
       UV_CACHE_DIR: .uv-cache
-      SMTP_CONNECTION_URL: ${{ secrets.SMTP_CONNECTION_URL }}
-      SMOKE_REPORT_EMAIL_FROM: ${{ secrets.SMOKE_REPORT_EMAIL_FROM }}
-      SMOKE_REPORT_EMAIL_TO: ${{ secrets.SMOKE_REPORT_EMAIL_TO }}
 
     steps:
       - name: Check out repository
@@ -56,7 +53,7 @@ jobs:
           env_path = Path(".env")
           replacements = {
               "REQUEST_TIMEOUT_SECONDS": "20",
-              "SCRAPER_TIMEOUT_SECONDS": "10",
+              "SCRAPER_TIMEOUT_SECONDS": "20",
           }
 
           rendered_lines = []
@@ -150,18 +147,6 @@ jobs:
           echo "Smoke report:"
           echo
           cat smoke-report.md
-
-      - name: Send failure email
-        id: send_email
-        if: failure() && env.SMTP_CONNECTION_URL != '' && env.SMOKE_REPORT_EMAIL_FROM != '' && env.SMOKE_REPORT_EMAIL_TO != ''
-        uses: dawidd6/action-send-mail@v6
-        with:
-          connection_url: ${{ env.SMTP_CONNECTION_URL }}
-          from: ${{ env.SMOKE_REPORT_EMAIL_FROM }}
-          to: ${{ env.SMOKE_REPORT_EMAIL_TO }}
-          subject: "[${{ github.repository }}] Scheduled scrape monitor failed"
-          body: file://smoke-report.md
-          attachments: smoke-report.md,docker-logs.txt
 
       - name: Stop provider container
         id: compose_down

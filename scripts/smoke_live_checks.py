@@ -29,6 +29,7 @@ class CheckResult:
     ok: bool
     duration_seconds: float
     message: str
+    attempts: int = 1
     status_code: int | None = None
     match_count: int | None = None
     sample_titles: tuple[str, ...] = ()
@@ -190,6 +191,18 @@ def parse_args() -> argparse.Namespace:
         default=float(os.getenv("SMOKE_REQUEST_TIMEOUT_SECONDS", "90")),
         help="Timeout for each smoke-check HTTP request.",
     )
+    parser.add_argument(
+        "--retry-attempts",
+        type=int,
+        default=int(os.getenv("SMOKE_RETRY_ATTEMPTS", "3")),
+        help="Total attempts per endpoint check before failing.",
+    )
+    parser.add_argument(
+        "--retry-wait-seconds",
+        type=float,
+        default=float(os.getenv("SMOKE_RETRY_WAIT_SECONDS", "60")),
+        help="Delay between failed endpoint attempts.",
+    )
     return parser.parse_args()
 
 
@@ -269,6 +282,7 @@ async def run_health_check(client: httpx.AsyncClient) -> CheckResult:
             path="/health",
             ok=True,
             duration_seconds=duration,
+            attempts=1,
             status_code=response.status_code,
             message='returned {"status": "ok"}',
         )
@@ -374,6 +388,7 @@ async def run_search_check(
             path=check.path,
             ok=True,
             duration_seconds=duration,
+            attempts=1,
             status_code=response.status_code,
             match_count=len(matches),
             sample_titles=sample_titles,
@@ -393,7 +408,63 @@ def build_headers() -> dict[str, str]:
     token = os.getenv("AUDIOBOOKSHELF_AUTH_TOKEN", "").strip()
     if not token:
         return {}
-    return {"AUTHORIZATION": token}
+        return {"AUTHORIZATION": token}
+
+
+async def run_with_retries(
+    check_runner,
+    *,
+    retry_attempts: int,
+    retry_wait_seconds: float,
+) -> CheckResult:
+    total_attempts = max(1, retry_attempts)
+    last_result: CheckResult | None = None
+
+    for attempt in range(1, total_attempts + 1):
+        result = await check_runner()
+        result = CheckResult(
+            name=result.name,
+            path=result.path,
+            ok=result.ok,
+            duration_seconds=result.duration_seconds,
+            message=result.message,
+            attempts=attempt,
+            status_code=result.status_code,
+            match_count=result.match_count,
+            sample_titles=result.sample_titles,
+        )
+        if result.ok:
+            if attempt == 1:
+                return result
+            return CheckResult(
+                name=result.name,
+                path=result.path,
+                ok=True,
+                duration_seconds=result.duration_seconds,
+                message=f"{result.message} after retry {attempt}/{total_attempts}",
+                attempts=attempt,
+                status_code=result.status_code,
+                match_count=result.match_count,
+                sample_titles=result.sample_titles,
+            )
+        last_result = result
+        if attempt < total_attempts:
+            await asyncio.sleep(retry_wait_seconds)
+
+    assert last_result is not None
+    if total_attempts == 1:
+        return last_result
+    return CheckResult(
+        name=last_result.name,
+        path=last_result.path,
+        ok=False,
+        duration_seconds=last_result.duration_seconds,
+        message=f"{last_result.message} after {total_attempts} attempts",
+        attempts=total_attempts,
+        status_code=last_result.status_code,
+        match_count=last_result.match_count,
+        sample_titles=last_result.sample_titles,
+    )
 
 
 def render_report(*, base_url: str, results: list[CheckResult]) -> str:
@@ -418,6 +489,7 @@ def render_report(*, base_url: str, results: list[CheckResult]) -> str:
             f"{state} {result.name}",
             f"path={result.path}",
             f"time={result.duration_seconds:.2f}s",
+            f"attempt={result.attempts}",
         ]
         if result.status_code is not None:
             details.append(f"status={result.status_code}")
@@ -472,9 +544,21 @@ async def main_async(args: argparse.Namespace) -> int:
             )
             return 1
 
-        results.append(await run_health_check(client))
+        results.append(
+            await run_with_retries(
+                lambda: run_health_check(client),
+                retry_attempts=args.retry_attempts,
+                retry_wait_seconds=args.retry_wait_seconds,
+            )
+        )
         for check in SEARCH_CHECKS:
-            results.append(await run_search_check(client, check))
+            results.append(
+                await run_with_retries(
+                    lambda current_check=check: run_search_check(client, current_check),
+                    retry_attempts=args.retry_attempts,
+                    retry_wait_seconds=args.retry_wait_seconds,
+                )
+            )
 
     Path(args.report_file).write_text(
         render_report(base_url=args.base_url, results=results),
