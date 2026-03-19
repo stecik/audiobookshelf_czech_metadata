@@ -78,6 +78,14 @@ def test_build_scrapers_respects_source_flags() -> None:
     assert scrapers["knihydobrovsky"].source_name == "knihydobrovsky"
 
 
+def test_settings_blank_scraper_user_agent_falls_back_to_default(monkeypatch) -> None:
+    monkeypatch.setenv("SCRAPER_USER_AGENT", "   ")
+
+    settings = Settings.from_env()
+
+    assert settings.scraper_user_agent == Settings().scraper_user_agent
+
+
 def test_build_scrapers_can_enable_rozhlas_only() -> None:
     http_client = HttpClient(timeout_seconds=1.0, user_agent="tests")
     settings = Settings(

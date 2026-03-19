@@ -56,6 +56,14 @@ class Settings(BaseModel):
         text = str(value).strip()
         return text or None
 
+    @field_validator("scraper_user_agent", mode="before")
+    @classmethod
+    def normalize_user_agent(cls, value: object) -> str:
+        if value is None:
+            return DEFAULT_USER_AGENT
+        text = str(value).strip()
+        return text or DEFAULT_USER_AGENT
+
     @classmethod
     def from_env(cls) -> Settings:
         return cls(
