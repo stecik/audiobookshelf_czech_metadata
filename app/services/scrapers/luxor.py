@@ -41,13 +41,14 @@ class LuxorScraper(BaseMetadataScraper):
         self._http_client = http_client
 
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
-        payload = await self._fetch_search_payload(query=query, author=author)
-        books = self.parse_search_response(payload)
-        if books or author is None:
-            return books
+        cleaned_query = normalize_whitespace(query) or ""
+        if author is None:
+            return await self._search_books(query=cleaned_query, author=None)
 
-        fallback_payload = await self._fetch_search_payload(query=query, author=None)
-        return self.parse_search_response(fallback_payload)
+        return await self._prefer_primary_results(
+            primary=lambda: self._search_books(query=cleaned_query, author=author),
+            fallback=lambda: self._search_books(query=cleaned_query, author=None),
+        )
 
     async def enrich(self, item: SourceBook) -> SourceBook:
         # Luxor detail pages are client-rendered shells, so the search payload is the reliable source for now.
@@ -71,6 +72,10 @@ class LuxorScraper(BaseMetadataScraper):
                 books.append(book)
 
         return books
+
+    async def _search_books(self, *, query: str, author: str | None) -> list[SourceBook]:
+        payload = await self._fetch_search_payload(query=query, author=author)
+        return self.parse_search_response(payload)
 
     async def _fetch_search_payload(self, *, query: str, author: str | None) -> dict[str, Any]:
         payload = await self._http_client.get_json(

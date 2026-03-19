@@ -43,14 +43,14 @@ class ProgresGuruScraper(BaseMetadataScraper):
 
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
         search_term = self._compose_search_term(query=query, author=author)
-        payload = await self._fetch_search_payload(search_term)
-        books = self.parse_search_response(payload)
-        if books or author is None:
-            return books
-
         fallback_query = normalize_whitespace(query) or ""
-        fallback_payload = await self._fetch_search_payload(fallback_query)
-        return self.parse_search_response(fallback_payload)
+        if author is None or search_term == fallback_query:
+            return await self._search_books(search_term)
+
+        return await self._prefer_primary_results(
+            primary=lambda: self._search_books(search_term),
+            fallback=lambda: self._search_books(fallback_query),
+        )
 
     async def enrich(self, item: SourceBook) -> SourceBook:
         payload = await self._http_client.get_json(self.DETAIL_URL_TEMPLATE.format(slug=item.source_id))
@@ -71,6 +71,10 @@ class ProgresGuruScraper(BaseMetadataScraper):
                 books.append(book)
 
         return books
+
+    async def _search_books(self, search_term: str) -> list[SourceBook]:
+        payload = await self._fetch_search_payload(search_term)
+        return self.parse_search_response(payload)
 
     def parse_detail_response(self, payload: dict[str, Any], *, partial: SourceBook | None = None) -> SourceBook:
         audiobook = payload.get("audiobook")

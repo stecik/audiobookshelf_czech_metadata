@@ -77,14 +77,13 @@ class RozhlasScraper(BaseMetadataScraper):
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
         cleaned_query = normalize_whitespace(query) or ""
         composed_query = self._compose_search_query(query=query, author=author)
+        if not author or composed_query == cleaned_query:
+            return await self._search_books(composed_query)
 
-        html = await self._http_client.get_text(self.SEARCH_URL, params={"combine": composed_query})
-        results = self.parse_search_results(html)
-        if results or not author or composed_query == cleaned_query:
-            return results
-
-        fallback_html = await self._http_client.get_text(self.SEARCH_URL, params={"combine": cleaned_query})
-        return self.parse_search_results(fallback_html)
+        return await self._prefer_primary_results(
+            primary=lambda: self._search_books(composed_query),
+            fallback=lambda: self._search_books(cleaned_query),
+        )
 
     async def enrich(self, item: SourceBook) -> SourceBook:
         html = await self._http_client.get_text(item.detail_url)
@@ -123,7 +122,9 @@ class RozhlasScraper(BaseMetadataScraper):
                     detail_url=detail_url,
                     authors=authors,
                     publishers=[self.DEFAULT_PUBLISHER],
-                    description=self._text(item.css_first(self._selectors.search_description)),
+                    description=self._text(
+                        item.css_first(self._selectors.search_description)
+                    ),
                     cover_url=self._picture_url(item),
                     genres=self._search_tags(item),
                     language="cs",
@@ -134,10 +135,20 @@ class RozhlasScraper(BaseMetadataScraper):
 
         return books
 
-    def parse_detail_page(self, html: str, *, partial: SourceBook | None = None) -> SourceBook:
+    async def _search_books(self, search_term: str) -> list[SourceBook]:
+        html = await self._http_client.get_text(
+            self.SEARCH_URL, params={"combine": search_term}
+        )
+        return self.parse_search_results(html)
+
+    def parse_detail_page(
+        self, html: str, *, partial: SourceBook | None = None
+    ) -> SourceBook:
         tree = HTMLParser(html)
         data_layer = self._extract_data_layer_payload(html)
-        player_payload = self._decode_player_payload(tree.css_first(self._selectors.detail_player))
+        player_payload = self._decode_player_payload(
+            tree.css_first(self._selectors.detail_player)
+        )
         credit_info = self._extract_credit_info(tree)
 
         authors = list(partial.authors) if partial is not None else []
@@ -150,7 +161,11 @@ class RozhlasScraper(BaseMetadataScraper):
             title = partial.title if partial is not None else ""
 
         narrators = credit_info.narrators
-        publishers = [self._normalize_publisher(self._meta_content(tree, self._selectors.detail_meta_publisher))]
+        publishers = [
+            self._normalize_publisher(
+                self._meta_content(tree, self._selectors.detail_meta_publisher)
+            )
+        ]
         publishers = [publisher for publisher in publishers if publisher is not None]
         if not publishers and partial is not None:
             publishers = partial.publishers
@@ -175,7 +190,9 @@ class RozhlasScraper(BaseMetadataScraper):
         )
         published_year = self._resolve_published_year(credit_info.years, data_layer)
         duration_minutes = self._duration_from_player_payload(player_payload)
-        language = normalize_match_text(self._meta_content(tree, self._selectors.detail_meta_language))
+        language = normalize_match_text(
+            self._meta_content(tree, self._selectors.detail_meta_language)
+        )
         language_code = "cs" if language in {"cs", "cestina"} or not language else None
 
         if partial is not None:
@@ -261,7 +278,9 @@ class RozhlasScraper(BaseMetadataScraper):
     def _search_tags(self, item: Node) -> list[str]:
         return unique_preserving_order(
             tag
-            for tag in (self._text(node) for node in item.css(self._selectors.search_tag_labels))
+            for tag in (
+                self._text(node) for node in item.css(self._selectors.search_tag_labels)
+            )
             if normalize_match_text(tag) not in self.NOISE_TAGS
         )
 
@@ -276,7 +295,9 @@ class RozhlasScraper(BaseMetadataScraper):
         image = item.css_first(self._selectors.search_picture_image)
         return to_absolute_url(
             self.BASE_URL,
-            self._srcset_url(self._attr(image, "data-srcset") or self._attr(image, "srcset"))
+            self._srcset_url(
+                self._attr(image, "data-srcset") or self._attr(image, "srcset")
+            )
             or self._attr(image, "data-src")
             or self._attr(image, "src"),
         )
@@ -296,7 +317,9 @@ class RozhlasScraper(BaseMetadataScraper):
             return None
         return match.group("source_id")
 
-    def _infer_author_prefix(self, raw_title: str | None) -> tuple[str | None, str | None]:
+    def _infer_author_prefix(
+        self, raw_title: str | None
+    ) -> tuple[str | None, str | None]:
         normalized = normalize_title(raw_title)
         if normalized is None:
             return None, None
@@ -354,7 +377,11 @@ class RozhlasScraper(BaseMetadataScraper):
                 label, value = self._extract_label_value(line)
                 if label is None:
                     continue
-                if value is None and index + 1 < len(lines) and not self._has_label(lines[index + 1]):
+                if (
+                    value is None
+                    and index + 1 < len(lines)
+                    and not self._has_label(lines[index + 1])
+                ):
                     value = lines[index + 1]
                 if value is None:
                     continue
@@ -401,7 +428,10 @@ class RozhlasScraper(BaseMetadataScraper):
     def _authors_from_data_layer(self, data_layer: dict[str, Any] | None) -> list[str]:
         if data_layer is None:
             return []
-        if normalize_match_text(self._string(data_layer.get("entityBundle"))) == "serial":
+        if (
+            normalize_match_text(self._string(data_layer.get("entityBundle")))
+            == "serial"
+        ):
             return []
         return unique_preserving_order([self._string(data_layer.get("contentAuthor"))])
 
@@ -433,7 +463,9 @@ class RozhlasScraper(BaseMetadataScraper):
             or self._string(data_layer.get("airedDate"))
         )
 
-    def _duration_from_player_payload(self, player_payload: dict[str, Any] | None) -> int | None:
+    def _duration_from_player_payload(
+        self, player_payload: dict[str, Any] | None
+    ) -> int | None:
         if player_payload is None:
             return None
         data = player_payload.get("data")
@@ -455,7 +487,9 @@ class RozhlasScraper(BaseMetadataScraper):
             return None
         return max(1, total_seconds // 60)
 
-    def _cover_from_player_payload(self, player_payload: dict[str, Any] | None) -> str | None:
+    def _cover_from_player_payload(
+        self, player_payload: dict[str, Any] | None
+    ) -> str | None:
         if player_payload is None:
             return None
         data = player_payload.get("data")
@@ -484,8 +518,7 @@ class RozhlasScraper(BaseMetadataScraper):
         if not isinstance(value, dict):
             return []
         return unique_preserving_order(
-            self._string(item_value)
-            for item_value in value.values()
+            self._string(item_value) for item_value in value.values()
         )
 
     def _split_people(self, value: str | None) -> list[str]:

@@ -44,14 +44,14 @@ class KanopaScraper(BaseMetadataScraper):
 
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
         search_term = self._compose_search_term(query=query, author=author)
-        html = await self._fetch_search_page(search_term)
-        books = self.parse_search_results(html)
-        if books or author is None:
-            return books
-
         fallback_query = normalize_whitespace(query) or ""
-        fallback_html = await self._fetch_search_page(fallback_query)
-        return self.parse_search_results(fallback_html)
+        if author is None or search_term == fallback_query:
+            return await self._search_books(search_term)
+
+        return await self._prefer_primary_results(
+            primary=lambda: self._search_books(search_term),
+            fallback=lambda: self._search_books(fallback_query),
+        )
 
     async def enrich(self, item: SourceBook) -> SourceBook:
         html = await self._http_client.get_text(item.detail_url)
@@ -90,6 +90,10 @@ class KanopaScraper(BaseMetadataScraper):
             )
 
         return books
+
+    async def _search_books(self, search_term: str) -> list[SourceBook]:
+        html = await self._fetch_search_page(search_term)
+        return self.parse_search_results(html)
 
     def parse_detail_page(self, html: str, *, partial: SourceBook | None = None) -> SourceBook:
         tree = HTMLParser(html)
