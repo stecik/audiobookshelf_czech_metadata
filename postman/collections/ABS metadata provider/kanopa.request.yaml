@@ -3,4 +3,4 @@ url: http://localhost:8000/kanopa/search?query=Vražda%20v%20hrobě
 method: GET
 queryParams:
   query: Vražda%20v%20hrobě
-order: 18000
+order: 22000

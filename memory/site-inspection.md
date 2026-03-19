@@ -456,3 +456,35 @@ Date: 2026-03-16
 
 - Raw HTTP requests from this development environment currently receive a Cloudflare `Just a moment...` challenge on both desktop and mobile hosts.
 - The implementation therefore detects challenge pages explicitly, logs them as upstream unavailability, and keeps the parser text-oriented so the source can still work in environments where Alza allows the requests through.
+
+# Databaze knih Site Inspection
+
+Date: 2026-03-19
+
+## Confirmed search path
+
+- The homepage search form submits a GET request to `/search` with the `q` parameter.
+- Book-only search works through `https://www.databazeknih.cz/search?in=books&q=...`.
+- Live inspection showed that title-only upstream queries are more reliable than mixing title and author text, so author filtering should stay in provider-layer ranking.
+
+## Search result structure
+
+- Result cards render server-side as `p.new` blocks.
+- Book links are exposed as `a.new[type='book']`.
+- Search metadata is available in `span.pozn`, usually as `YEAR, Author`.
+- Covers are available under `picture img`.
+
+## Detail page structure
+
+- Detail pages live under `/prehled-knihy/<slug>-<id>`.
+- Title selector: `h1.oddown_five`, but the heading includes a trailing `přehled` label that must be stripped.
+- Author links render in `.orangeBoxLight .author a`.
+- Description selector: `#bdetail_rest p.new2.odtop`.
+- Genre links render under `.detail_description a.genre`.
+- Publisher and publish year are available inside `.detail_description`.
+- Pages also expose a JSON-LD `Book` payload with `name`, `author`, `publisher`, `description`, `image`, and `inLanguage`.
+
+## Reliability notes
+
+- Databaze knih is not an audiobook storefront. It is best treated as a metadata fallback source for custom audiobooks that have no official audiobook listing.
+- Because the site is books-only, the source defaults to disabled in global `/search` but remains available through `/databazeknih/search`.

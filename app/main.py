@@ -18,6 +18,7 @@ from app.services.scrapers.alza import AlzaScraper
 from app.services.scrapers.audiolibrix import AudiolibrixScraper
 from app.services.scrapers.audioteka import AudiotekaScraper
 from app.services.scrapers.base import BaseMetadataScraper
+from app.services.scrapers.databazeknih import DatabazeKnihScraper
 from app.services.scrapers.kanopa import KanopaScraper
 from app.services.scrapers.knihydobrovsky import KnihyDobrovskyScraper
 from app.services.scrapers.kosmas import KosmasScraper
@@ -35,45 +36,37 @@ from app.utils.logging import configure_logging
 logger = logging.getLogger(__name__)
 
 
+def build_all_scrapers(*, http_client: HttpClient) -> dict[str, BaseMetadataScraper]:
+    return {
+        "alza": AlzaScraper(http_client=http_client),
+        "albatrosmedia": AlbatrosMediaScraper(http_client=http_client),
+        "audiolibrix": AudiolibrixScraper(http_client=http_client),
+        "audioteka": AudiotekaScraper(http_client=http_client),
+        "databazeknih": DatabazeKnihScraper(http_client=http_client),
+        "kanopa": KanopaScraper(http_client=http_client),
+        "knihydobrovsky": KnihyDobrovskyScraper(http_client=http_client),
+        "kosmas": KosmasScraper(http_client=http_client),
+        "luxor": LuxorScraper(http_client=http_client),
+        "megaknihy": MegaknihyScraper(http_client=http_client),
+        "naposlech": NaposlechScraper(http_client=http_client),
+        "onehotbook": OneHotBookScraper(http_client=http_client),
+        "o2knihovna": O2KnihovnaScraper(http_client=http_client),
+        "palmknihy": PalmknihyScraper(http_client=http_client),
+        "progresguru": ProgresGuruScraper(http_client=http_client),
+        "radioteka": RadiotekaScraper(http_client=http_client),
+        "rozhlas": RozhlasScraper(http_client=http_client),
+    }
+
+
 def build_scrapers(
     *, settings: Settings, http_client: HttpClient
 ) -> dict[str, BaseMetadataScraper]:
-    scrapers: dict[str, BaseMetadataScraper] = {}
-
-    if settings.enable_alza:
-        scrapers["alza"] = AlzaScraper(http_client=http_client)
-    if settings.enable_albatrosmedia:
-        scrapers["albatrosmedia"] = AlbatrosMediaScraper(http_client=http_client)
-    if settings.enable_audiolibrix:
-        scrapers["audiolibrix"] = AudiolibrixScraper(http_client=http_client)
-    if settings.enable_audioteka:
-        scrapers["audioteka"] = AudiotekaScraper(http_client=http_client)
-    if settings.enable_kanopa:
-        scrapers["kanopa"] = KanopaScraper(http_client=http_client)
-    if settings.enable_knihydobrovsky:
-        scrapers["knihydobrovsky"] = KnihyDobrovskyScraper(http_client=http_client)
-    if settings.enable_kosmas:
-        scrapers["kosmas"] = KosmasScraper(http_client=http_client)
-    if settings.enable_luxor:
-        scrapers["luxor"] = LuxorScraper(http_client=http_client)
-    if settings.enable_megaknihy:
-        scrapers["megaknihy"] = MegaknihyScraper(http_client=http_client)
-    if settings.enable_naposlech:
-        scrapers["naposlech"] = NaposlechScraper(http_client=http_client)
-    if settings.enable_onehotbook:
-        scrapers["onehotbook"] = OneHotBookScraper(http_client=http_client)
-    if settings.enable_o2knihovna:
-        scrapers["o2knihovna"] = O2KnihovnaScraper(http_client=http_client)
-    if settings.enable_palmknihy:
-        scrapers["palmknihy"] = PalmknihyScraper(http_client=http_client)
-    if settings.enable_progresguru:
-        scrapers["progresguru"] = ProgresGuruScraper(http_client=http_client)
-    if settings.enable_radioteka:
-        scrapers["radioteka"] = RadiotekaScraper(http_client=http_client)
-    if settings.enable_rozhlas:
-        scrapers["rozhlas"] = RozhlasScraper(http_client=http_client)
-
-    return scrapers
+    all_scrapers = build_all_scrapers(http_client=http_client)
+    return {
+        source_name: scraper
+        for source_name, scraper in all_scrapers.items()
+        if getattr(settings, f"enable_{source_name}", False)
+    }
 
 
 def build_provider_service(
@@ -100,7 +93,12 @@ def create_app() -> FastAPI:
             timeout_seconds=settings.request_timeout_seconds,
             user_agent=settings.scraper_user_agent,
         )
-        scrapers = build_scrapers(settings=settings, http_client=http_client)
+        all_scrapers = build_all_scrapers(http_client=http_client)
+        scrapers = {
+            source_name: scraper
+            for source_name, scraper in all_scrapers.items()
+            if getattr(settings, f"enable_{source_name}", False)
+        }
         provider_service = build_provider_service(
             scrapers=list(scrapers.values()),
             detail_enrichment_limit=settings.detail_enrichment_limit,
@@ -110,7 +108,7 @@ def create_app() -> FastAPI:
         app.state.settings = settings
         app.state.http_client = http_client
         app.state.provider_service = provider_service
-        for source_name, scraper in scrapers.items():
+        for source_name, scraper in all_scrapers.items():
             setattr(
                 app.state,
                 f"provider_service_{source_name}",
@@ -142,8 +140,6 @@ def create_app() -> FastAPI:
 
     app.include_router(search_router)
     for source_name, dependency in provider_service_dependencies.items():
-        if not getattr(settings, f"enable_{source_name}", False):
-            continue
         app.include_router(
             create_provider_router(
                 provider_dependency=dependency,

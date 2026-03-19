@@ -71,6 +71,17 @@ def test_alza_source_specific_search_endpoint_returns_matches_with_dependency_ov
     assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
+def test_databazeknih_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
+    app = create_app()
+    app.dependency_overrides[provider_service_dependencies["databazeknih"]] = lambda: StubProviderService()
+
+    with TestClient(app) as client:
+        response = client.get("/databazeknih/search", params={"query": "1984"})
+
+    assert response.status_code == 200
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
+
+
 def test_kanopa_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
     app = create_app()
     app.dependency_overrides[provider_service_dependencies["kanopa"]] = lambda: StubProviderService()
@@ -199,12 +210,14 @@ def test_search_endpoint_requires_authorization_when_token_is_configured(monkeyp
     assert authorized.status_code == 200
 
 
-def test_disabled_source_endpoint_is_not_registered(monkeypatch) -> None:
+def test_disabled_source_endpoint_remains_available_for_direct_search(monkeypatch) -> None:
     monkeypatch.setenv("ENABLE_ONEHOTBOOK", "false")
 
     app = create_app()
+    app.dependency_overrides[provider_service_dependencies["onehotbook"]] = lambda: StubProviderService()
 
     with TestClient(app) as client:
         response = client.get("/onehotbook/search", params={"query": "1984"})
 
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert response.json() == {"matches": [EXPECTED_MATCH]}

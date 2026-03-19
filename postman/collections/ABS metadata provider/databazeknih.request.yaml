@@ -1,0 +1,7 @@
+$kind: http-request
+name: databazeknih
+url: http://localhost:8000/databazeknih/search?query=Vražda%20v%20hrobě
+method: GET
+queryParams:
+  query: Vražda%20v%20hrobě
+order: 18000

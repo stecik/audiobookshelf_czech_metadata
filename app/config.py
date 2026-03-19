@@ -28,6 +28,7 @@ class Settings(BaseModel):
     enable_alza: bool = True
     enable_audiolibrix: bool = True
     enable_audioteka: bool = True
+    enable_databazeknih: bool = False
     enable_kanopa: bool = True
     enable_knihydobrovsky: bool = True
     enable_kosmas: bool = True
@@ -68,6 +69,7 @@ class Settings(BaseModel):
             enable_alza=os.getenv("ENABLE_ALZA", "true"),
             enable_audiolibrix=os.getenv("ENABLE_AUDIOLIBRIX", "true"),
             enable_audioteka=os.getenv("ENABLE_AUDIOTEKA", "true"),
+            enable_databazeknih=os.getenv("ENABLE_DATABAZEKNIH", "false"),
             enable_kanopa=os.getenv("ENABLE_KANOPA", "true"),
             enable_knihydobrovsky=os.getenv("ENABLE_KNIHYDOBROVSKY", "true"),
             enable_kosmas=os.getenv("ENABLE_KOSMAS", "true"),

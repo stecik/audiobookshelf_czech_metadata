@@ -6,6 +6,7 @@ FastAPI service that implements the Audiobookshelf custom metadata provider cont
 - [Albatros Media Audioknihy](https://www.albatrosmedia.cz/edice/36467691/audioknihy/)
 - [Audiolibrix Czech](https://www.audiolibrix.com/cs)
 - [Audioteka Czech](https://audioteka.com/cz/)
+- [Databaze knih](https://www.databazeknih.cz/) for book metadata fallback on custom audiobooks without official audiobook metadata
 - [Kanopa](https://www.kanopa.cz/)
 - [Knihy Dobrovský Audioknihy](https://www.knihydobrovsky.cz/audioknihy)
 - [Kosmas Audioknihy](https://www.kosmas.cz/audioknihy/)
@@ -27,6 +28,7 @@ It exposes:
 - `GET /albatrosmedia/health` and `GET /albatrosmedia/search?...`
 - `GET /audiolibrix/health` and `GET /audiolibrix/search?...`
 - `GET /audioteka/health` and `GET /audioteka/search?...`
+- `GET /databazeknih/health` and `GET /databazeknih/search?...`
 - `GET /kanopa/health` and `GET /kanopa/search?...`
 - `GET /knihydobrovsky/health` and `GET /knihydobrovsky/search?...`
 - `GET /kosmas/health` and `GET /kosmas/search?...`
@@ -98,6 +100,7 @@ ENABLE_ALZA=false
 ENABLE_ALBATROSMEDIA=true
 ENABLE_AUDIOLIBRIX=true
 ENABLE_AUDIOTEKA=true
+ENABLE_DATABAZEKNIH=false
 ENABLE_KANOPA=true
 ENABLE_KNIHYDOBROVSKY=true
 ENABLE_KOSMAS=true
@@ -122,9 +125,9 @@ If `AUDIOBOOKSHELF_AUTH_TOKEN` is set, Audiobookshelf must send the same value i
 
 `REQUEST_TIMEOUT_SECONDS` controls the timeout of a single upstream HTTP request. `SCRAPER_TIMEOUT_SECONDS` controls the total time budget for one scraper search or detail-enrichment task. If one scraper exceeds that limit, its results are skipped and the remaining scrapers still complete normally. If every scraper times out, the API returns an empty `matches` list instead of failing the request.
 
-All sources are enabled by default. Set any `ENABLE_*` flag to `false` to skip that storefront entirely. ALZA is currently not working
+All audiobook sources are enabled by default except `DATABAZEKNIH`, which defaults to `false` because it is a books-only metadata fallback for custom audiobooks.
 
-When a source is disabled, it is excluded from the global `/search` results and its source-specific endpoint is not registered.
+Each `ENABLE_*` flag controls only participation in the global `/search`. Source-specific endpoints such as `/databazeknih/search` stay available even when that source is disabled globally.
 
 ## Audiobookshelf Setup
 
@@ -143,6 +146,7 @@ Audiobookshelf expects the provider base URL, not `/search`.
 - Albatros Media-only provider: `http://localhost:8000/albatrosmedia`
 - Audiolibrix-only provider: `http://localhost:8000/audiolibrix`
 - Audioteka-only provider: `http://localhost:8000/audioteka`
+- Databaze knih-only provider: `http://localhost:8000/databazeknih`
 - Kanopa-only provider: `http://localhost:8000/kanopa`
 - Knihy Dobrovsky-only provider: `http://localhost:8000/knihydobrovsky`
 - Kosmas-only provider: `http://localhost:8000/kosmas`
@@ -220,6 +224,12 @@ Audioteka only:
 
 ```bash
 curl "http://localhost:8000/audioteka/search?query=1984&author=George%20Orwell"
+```
+
+Databaze knih only:
+
+```bash
+curl "http://localhost:8000/databazeknih/search?query=1984&author=George%20Orwell"
 ```
 
 Kanopa only:

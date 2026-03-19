@@ -7,11 +7,12 @@ from app.config import Settings
 from app.main import build_scrapers
 
 
-def test_settings_enable_all_sources_by_default(monkeypatch) -> None:
+def test_settings_enable_default_source_set(monkeypatch) -> None:
     monkeypatch.delenv("ENABLE_ALZA", raising=False)
     monkeypatch.delenv("ENABLE_ALBATROSMEDIA", raising=False)
     monkeypatch.delenv("ENABLE_AUDIOLIBRIX", raising=False)
     monkeypatch.delenv("ENABLE_AUDIOTEKA", raising=False)
+    monkeypatch.delenv("ENABLE_DATABAZEKNIH", raising=False)
     monkeypatch.delenv("ENABLE_KANOPA", raising=False)
     monkeypatch.delenv("ENABLE_KNIHYDOBROVSKY", raising=False)
     monkeypatch.delenv("ENABLE_KOSMAS", raising=False)
@@ -31,6 +32,7 @@ def test_settings_enable_all_sources_by_default(monkeypatch) -> None:
     assert settings.enable_albatrosmedia is True
     assert settings.enable_audiolibrix is True
     assert settings.enable_audioteka is True
+    assert settings.enable_databazeknih is False
     assert settings.enable_kanopa is True
     assert settings.enable_knihydobrovsky is True
     assert settings.enable_kosmas is True
@@ -52,6 +54,7 @@ def test_build_scrapers_respects_source_flags() -> None:
         enable_albatrosmedia=False,
         enable_audiolibrix=False,
         enable_audioteka=False,
+        enable_databazeknih=False,
         enable_kanopa=False,
         enable_knihydobrovsky=True,
         enable_kosmas=False,
@@ -82,6 +85,7 @@ def test_build_scrapers_can_enable_rozhlas_only() -> None:
         enable_albatrosmedia=False,
         enable_audiolibrix=False,
         enable_audioteka=False,
+        enable_databazeknih=False,
         enable_kanopa=False,
         enable_knihydobrovsky=False,
         enable_kosmas=False,
@@ -112,6 +116,7 @@ def test_build_scrapers_can_enable_alza_only() -> None:
         enable_albatrosmedia=False,
         enable_audiolibrix=False,
         enable_audioteka=False,
+        enable_databazeknih=False,
         enable_kanopa=False,
         enable_knihydobrovsky=False,
         enable_kosmas=False,
@@ -133,3 +138,34 @@ def test_build_scrapers_can_enable_alza_only() -> None:
 
     assert list(scrapers) == ["alza"]
     assert scrapers["alza"].source_name == "alza"
+
+
+def test_build_scrapers_can_enable_databazeknih_only() -> None:
+    http_client = HttpClient(timeout_seconds=1.0, user_agent="tests")
+    settings = Settings(
+        enable_alza=False,
+        enable_albatrosmedia=False,
+        enable_audiolibrix=False,
+        enable_audioteka=False,
+        enable_databazeknih=True,
+        enable_kanopa=False,
+        enable_knihydobrovsky=False,
+        enable_kosmas=False,
+        enable_luxor=False,
+        enable_megaknihy=False,
+        enable_naposlech=False,
+        enable_onehotbook=False,
+        enable_o2knihovna=False,
+        enable_palmknihy=False,
+        enable_progresguru=False,
+        enable_radioteka=False,
+        enable_rozhlas=False,
+    )
+
+    try:
+        scrapers = build_scrapers(settings=settings, http_client=http_client)
+    finally:
+        asyncio.run(http_client.aclose())
+
+    assert list(scrapers) == ["databazeknih"]
+    assert scrapers["databazeknih"].source_name == "databazeknih"
