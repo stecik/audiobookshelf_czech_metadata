@@ -6,6 +6,7 @@ from app.models import SourceBook
 from app.services.normalizers.audiobookshelf import AudiobookshelfNormalizer
 from app.services.provider import (
     MetadataProviderService,
+    calculate_match_confidence,
     filter_book_results,
     score_book_result,
     sort_book_results,
@@ -192,6 +193,36 @@ def test_filter_book_results_treats_hyphenated_and_compact_titles_as_equivalent(
     assert [book.source_id for book in filtered] == ["2"]
 
 
+def test_calculate_match_confidence_prefers_exact_title_author_matches() -> None:
+    exact = make_book(
+        source_id="1",
+        title="1984",
+        authors=["George Orwell"],
+        language="cs",
+    )
+    broad = make_book(
+        source_id="2",
+        title="1984: rozbor a historické souvislosti",
+        authors=["Jiný autor"],
+        language="cs",
+    )
+
+    exact_confidence = calculate_match_confidence(
+        exact,
+        query="1984",
+        author="George Orwell",
+    )
+    broad_confidence = calculate_match_confidence(
+        broad,
+        query="1984",
+        author="George Orwell",
+    )
+
+    assert exact_confidence == 1.0
+    assert broad_confidence < exact_confidence
+    assert broad_confidence >= 0.0
+
+
 class StaticScraper(BaseMetadataScraper):
     def __init__(self, source_name: str, books: list[SourceBook]) -> None:
         self.source_name = source_name
@@ -257,6 +288,7 @@ def test_provider_service_returns_filtered_matches_only() -> None:
 
     assert [match.title for match in response.matches] == ["Zabíjení", "Zabíjení"]
     assert {match.author for match in response.matches} == {"Štěpán Kopřiva"}
+    assert all(match.matchConfidence == 1.0 for match in response.matches)
 
 
 def test_provider_service_ignores_slow_scraper_and_returns_fast_results() -> None:
@@ -281,6 +313,7 @@ def test_provider_service_ignores_slow_scraper_and_returns_fast_results() -> Non
 
     assert [match.title for match in response.matches] == ["1984"]
     assert [match.author for match in response.matches] == ["George Orwell"]
+    assert response.matches[0].matchConfidence == 1.0
 
 
 def test_provider_service_returns_empty_matches_when_all_scrapers_time_out() -> None:

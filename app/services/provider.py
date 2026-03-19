@@ -95,6 +95,25 @@ def score_candidate(
     return score_book_result(book, query=query, author=author)
 
 
+def calculate_match_confidence(
+    book: SourceBook, *, query: str, author: str | None = None
+) -> float:
+    signals = build_book_match_signals(book, query=query, author=author)
+    max_score = 145.0 if author else 115.0
+    confidence = signals.score / max_score if max_score else 0.0
+
+    if signals.title_exact and (not author or signals.author_match):
+        confidence = max(confidence, 1.0)
+    elif signals.title_exact:
+        confidence = max(confidence, 0.9)
+    elif signals.title_is_strong and signals.author_match:
+        confidence = max(confidence, 0.82)
+    elif signals.title_contains_query or signals.query_contains_title:
+        confidence = max(confidence, 0.62)
+
+    return round(max(0.0, min(1.0, confidence)), 4)
+
+
 def build_book_match_signals(
     book: SourceBook, *, query: str, author: str | None = None
 ) -> BookMatchSignals:
@@ -302,7 +321,20 @@ class MetadataProviderService:
             },
         )
 
-        return self._normalizer.normalize_many(filtered_results)
+        confident_results = [
+            book.model_copy(
+                update={
+                    "match_confidence": calculate_match_confidence(
+                        book,
+                        query=query,
+                        author=author,
+                    )
+                }
+            )
+            for book in filtered_results
+        ]
+
+        return self._normalizer.normalize_many(confident_results)
 
     async def _search_with_timeout(
         self,

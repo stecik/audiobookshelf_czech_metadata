@@ -19,6 +19,7 @@ class AudiobookshelfNormalizer:
             tags=book.tags or None,
             language=book.language,
             duration=book.duration_minutes,
+            matchConfidence=book.match_confidence,
         )
 
     def normalize_many(self, books: list[SourceBook]) -> SearchResponse:

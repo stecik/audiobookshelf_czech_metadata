@@ -7,6 +7,14 @@ from app.models import AudiobookshelfMatch, SearchResponse
 from app.routers.search import get_provider_service, provider_service_dependencies
 
 
+EXPECTED_MATCH = {
+    "title": "1984",
+    "author": "George Orwell",
+    "narrator": "David Novotný",
+    "matchConfidence": 0.87,
+}
+
+
 class StubProviderService:
     async def search(self, *, query: str, author: str | None = None) -> SearchResponse:
         return SearchResponse(
@@ -15,6 +23,7 @@ class StubProviderService:
                     title="1984",
                     author="George Orwell",
                     narrator="David Novotný",
+                    matchConfidence=0.87,
                 )
             ]
         )
@@ -37,15 +46,7 @@ def test_search_endpoint_returns_matches_with_dependency_override() -> None:
         response = client.get("/search", params={"query": "1984", "author": "George Orwell"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -56,15 +57,7 @@ def test_source_specific_search_endpoint_returns_matches_with_dependency_overrid
         response = client.get("/audioteka/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_alza_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -75,15 +68,7 @@ def test_alza_source_specific_search_endpoint_returns_matches_with_dependency_ov
         response = client.get("/alza/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_kanopa_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -94,15 +79,7 @@ def test_kanopa_source_specific_search_endpoint_returns_matches_with_dependency_
         response = client.get("/kanopa/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_knihydobrovsky_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -113,15 +90,7 @@ def test_knihydobrovsky_source_specific_search_endpoint_returns_matches_with_dep
         response = client.get("/knihydobrovsky/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_luxor_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -132,15 +101,7 @@ def test_luxor_source_specific_search_endpoint_returns_matches_with_dependency_o
         response = client.get("/luxor/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_megaknihy_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -151,15 +112,7 @@ def test_megaknihy_source_specific_search_endpoint_returns_matches_with_dependen
         response = client.get("/megaknihy/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_naposlech_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -170,15 +123,7 @@ def test_naposlech_source_specific_search_endpoint_returns_matches_with_dependen
         response = client.get("/naposlech/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_palmknihy_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -189,15 +134,7 @@ def test_palmknihy_source_specific_search_endpoint_returns_matches_with_dependen
         response = client.get("/palmknihy/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_o2knihovna_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -208,15 +145,7 @@ def test_o2knihovna_source_specific_search_endpoint_returns_matches_with_depende
         response = client.get("/o2knihovna/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_radioteka_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -227,15 +156,7 @@ def test_radioteka_source_specific_search_endpoint_returns_matches_with_dependen
         response = client.get("/radioteka/search", params={"query": "1984"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_rozhlas_source_specific_search_endpoint_returns_matches_with_dependency_override() -> None:
@@ -246,15 +167,7 @@ def test_rozhlas_source_specific_search_endpoint_returns_matches_with_dependency
         response = client.get("/rozhlas/search", params={"query": "Skořápka"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matches": [
-            {
-                "title": "1984",
-                "author": "George Orwell",
-                "narrator": "David Novotný",
-            }
-        ]
-    }
+    assert response.json() == {"matches": [EXPECTED_MATCH]}
 
 
 def test_source_specific_health_endpoint_returns_ok() -> None:

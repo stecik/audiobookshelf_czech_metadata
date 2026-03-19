@@ -21,6 +21,7 @@ class SourceBook(BaseModel):
     tags: list[str] = Field(default_factory=list)
     language: str | None = None
     duration_minutes: int | None = None
+    match_confidence: float | None = None
     detail_loaded: bool = False
 
 
@@ -49,6 +50,7 @@ class AudiobookshelfMatch(BaseModel):
     series: list[AudiobookshelfSeries] | None = None
     language: str | None = None
     duration: int | None = None
+    matchConfidence: float | None = None
 
 
 class SearchResponse(BaseModel):
