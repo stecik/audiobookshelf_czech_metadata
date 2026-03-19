@@ -1,0 +1,160 @@
+name: Scheduled scrape monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 */3 * *"
+
+concurrency:
+  group: scrape-monitor
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      UV_CACHE_DIR: .uv-cache
+      SMTP_CONNECTION_URL: ${{ secrets.SMTP_CONNECTION_URL }}
+      SMOKE_REPORT_EMAIL_FROM: ${{ secrets.SMOKE_REPORT_EMAIL_FROM }}
+      SMOKE_REPORT_EMAIL_TO: ${{ secrets.SMOKE_REPORT_EMAIL_TO }}
+
+    steps:
+      - name: Check out repository
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        id: setup_python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        id: setup_uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        id: install
+        run: uv sync --group dev
+
+      - name: Run unit tests
+        id: pytest
+        run: uv run pytest
+
+      - name: Prepare workflow environment
+        id: prepare_env
+        shell: bash
+        run: |
+          cp .env.example .env
+          python - <<'PY'
+          from pathlib import Path
+
+          env_path = Path(".env")
+          replacements = {
+              "REQUEST_TIMEOUT_SECONDS": "20",
+              "SCRAPER_TIMEOUT_SECONDS": "10",
+          }
+
+          rendered_lines = []
+          for line in env_path.read_text(encoding="utf-8").splitlines():
+              key, separator, value = line.partition("=")
+              if separator and key in replacements:
+                  rendered_lines.append(f"{key}={replacements[key]}")
+              else:
+                  rendered_lines.append(line)
+          env_path.write_text("\n".join(rendered_lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Build development image
+        id: compose_build
+        run: docker compose -f docker-compose.dev.yml build provider
+
+      - name: Start provider container
+        id: compose_up
+        run: docker compose -f docker-compose.dev.yml up -d provider
+
+      - name: Run live endpoint smoke checks
+        id: smoke_checks
+        run: uv run python scripts/smoke_live_checks.py --base-url http://127.0.0.1:8000 --report-file smoke-report.md
+
+      - name: Collect docker logs
+        id: collect_logs
+        if: always()
+        shell: bash
+        run: |
+          docker compose -f docker-compose.dev.yml logs --no-color provider > docker-logs.txt || true
+
+      - name: Prepare failure report
+        id: prepare_report
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -f smoke-report.md ]; then
+            {
+              echo "# Scheduled scrape smoke report"
+              echo
+              echo "- No endpoint report was generated because the workflow failed before smoke checks completed."
+              echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+              echo
+              echo "## Step outcomes"
+              echo
+              echo "- checkout: ${{ steps.checkout.outcome }}"
+              echo "- setup-python: ${{ steps.setup_python.outcome }}"
+              echo "- setup-uv: ${{ steps.setup_uv.outcome }}"
+              echo "- install: ${{ steps.install.outcome }}"
+              echo "- pytest: ${{ steps.pytest.outcome }}"
+              echo "- prepare-env: ${{ steps.prepare_env.outcome }}"
+              echo "- compose-build: ${{ steps.compose_build.outcome }}"
+              echo "- compose-up: ${{ steps.compose_up.outcome }}"
+              echo "- smoke-checks: ${{ steps.smoke_checks.outcome }}"
+            } > smoke-report.md
+          fi
+
+          {
+            echo
+            echo "## Workflow"
+            echo
+            echo "- Repository: $GITHUB_REPOSITORY"
+            echo "- Ref: $GITHUB_REF"
+            echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- checkout: ${{ steps.checkout.outcome }}"
+            echo "- setup-python: ${{ steps.setup_python.outcome }}"
+            echo "- setup-uv: ${{ steps.setup_uv.outcome }}"
+            echo "- install: ${{ steps.install.outcome }}"
+            echo "- pytest: ${{ steps.pytest.outcome }}"
+            echo "- prepare-env: ${{ steps.prepare_env.outcome }}"
+            echo "- compose-build: ${{ steps.compose_build.outcome }}"
+            echo "- compose-up: ${{ steps.compose_up.outcome }}"
+            echo "- smoke-checks: ${{ steps.smoke_checks.outcome }}"
+          } >> smoke-report.md
+
+      - name: Upload smoke artifacts
+        id: upload_artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrape-monitor-report
+          path: |
+            smoke-report.md
+            docker-logs.txt
+
+      - name: Send failure email
+        id: send_email
+        if: failure() && env.SMTP_CONNECTION_URL != '' && env.SMOKE_REPORT_EMAIL_FROM != '' && env.SMOKE_REPORT_EMAIL_TO != ''
+        uses: dawidd6/action-send-mail@v6
+        with:
+          connection_url: ${{ env.SMTP_CONNECTION_URL }}
+          from: ${{ env.SMOKE_REPORT_EMAIL_FROM }}
+          to: ${{ env.SMOKE_REPORT_EMAIL_TO }}
+          subject: "[${{ github.repository }}] Scheduled scrape monitor failed"
+          body: file://smoke-report.md
+          attachments: smoke-report.md,docker-logs.txt
+
+      - name: Stop provider container
+        id: compose_down
+        if: always()
+        shell: bash
+        run: |
+          docker compose -f docker-compose.dev.yml down --remove-orphans || true
