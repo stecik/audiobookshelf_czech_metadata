@@ -17,6 +17,12 @@ Keep persistent working memory under `memory/`.
 - Use `memory/` for live site inspection notes, implementation decisions, parser findings, and follow-up items.
 - When repo-level workflow rules change, reflect them in `AGENTS.md`.
 
+## Compose workflow
+
+- `docker-compose.yml` is the image-based runtime and must keep serving the uploaded/published image.
+- `docker-compose.dev.yml` is the local development/testing compose file and is the correct place to build the workspace code.
+- Do not switch `docker-compose.yml` to `build: .` just to test local changes. Use `docker-compose.dev.yml` or direct local `uv` commands for that verification.
+
 ## Product context
 
 Audiobookshelf supports **custom metadata providers** via an external HTTP API. The provider is added in Audiobookshelf under **Metadata Tools** and ABS calls the provider's `/search` endpoint. ABS documentation states that custom providers were added in **server version 2.8.0+** and points to an OpenAPI spec for the request/response contract.

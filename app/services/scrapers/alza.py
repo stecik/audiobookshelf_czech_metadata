@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from html import unescape
 
 from selectolax.parser import HTMLParser, Node
 
@@ -60,6 +61,22 @@ class AlzaScraper(BaseMetadataScraper):
     MOBILE_BASE_URL = "https://m.alza.cz"
     SEARCH_URL = f"{BASE_URL}/search.htm"
     MOBILE_SEARCH_URL = f"{MOBILE_BASE_URL}/search.htm"
+    REQUEST_HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        ),
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,"
+            "image/avif,image/webp,*/*;q=0.8"
+        ),
+        "Accept-Language": "cs-CZ,cs;q=0.9,en;q=0.6",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+    }
 
     def __init__(self, *, http_client: HttpClient) -> None:
         self._http_client = http_client
@@ -69,7 +86,11 @@ class AlzaScraper(BaseMetadataScraper):
         search_query = self._compose_search_query(query=query, author=author)
 
         for search_url in [self.SEARCH_URL, self.MOBILE_SEARCH_URL]:
-            html = await self._http_client.get_text(search_url, params={"exps": search_query})
+            html = await self._http_client.get_text(
+                search_url,
+                params={"exps": search_query},
+                extra_headers=self.REQUEST_HEADERS,
+            )
             if self._looks_like_challenge_page(html):
                 continue
 
@@ -87,7 +108,7 @@ class AlzaScraper(BaseMetadataScraper):
         attempted_urls = [item.detail_url, self._to_mobile_detail_url(item.detail_url)]
 
         for detail_url in unique_preserving_order(attempted_urls):
-            html = await self._http_client.get_text(detail_url)
+            html = await self._http_client.get_text(detail_url, extra_headers=self.REQUEST_HEADERS)
             if self._looks_like_challenge_page(html):
                 continue
 
@@ -161,7 +182,11 @@ class AlzaScraper(BaseMetadataScraper):
             self._value_for_label(lines, "Délka") or self._first_matching_line(lines, "hod")
         )
         genres = self._extract_genres(lines)
-        description = self._extract_description(tree, lines, title=title)
+        description = self._meta_description(tree) or self._extract_description(
+            tree,
+            lines,
+            title=title,
+        )
         cover_url = self._meta_content(tree, "meta[property='og:image']") or self._meta_content(
             tree,
             "meta[name='og:image']",
@@ -293,14 +318,14 @@ class AlzaScraper(BaseMetadataScraper):
         return [genre for genre in genres if normalize_match_text(genre) != "audioknihy"]
 
     def _extract_description(self, tree: HTMLParser, lines: list[str], *, title: str | None) -> str | None:
-        paragraphs = unique_preserving_order(self._text(node) for node in tree.css("p"))
+        paragraphs = self._description_paragraphs(tree)
         paragraph_candidates = [
             paragraph
             for paragraph in paragraphs
             if self._is_description_line(paragraph)
         ]
         if paragraph_candidates:
-            return max(paragraph_candidates, key=len)
+            return normalize_whitespace(" ".join(paragraph_candidates))
 
         if title is None:
             return None
@@ -332,6 +357,33 @@ class AlzaScraper(BaseMetadataScraper):
             return None
 
         return normalize_whitespace(" ".join(description_lines))
+
+    def _meta_description(self, tree: HTMLParser) -> str | None:
+        candidates = [
+            self._meta_content(tree, "meta[property='og:description']"),
+            self._meta_content(tree, "meta[name='og:description']"),
+            self._meta_content(tree, "meta[property='twitter:description']"),
+            self._meta_content(tree, "meta[name='twitter:description']"),
+        ]
+        for candidate in candidates:
+            if self._is_description_line(candidate):
+                return candidate
+        return None
+
+    def _description_paragraphs(self, tree: HTMLParser) -> list[str]:
+        selectors = (
+            "#descriptionContent p",
+            "#descriptionContent li",
+            ".popis__content p",
+            ".popis__content li",
+            "#description p",
+            "#description li",
+        )
+        return unique_preserving_order(
+            self._text(node)
+            for selector in selectors
+            for node in tree.css(selector)
+        )
 
     def _value_for_label(self, lines: list[str], label: str) -> str | None:
         normalized_label = normalize_match_text(label)
@@ -385,7 +437,10 @@ class AlzaScraper(BaseMetadataScraper):
         )
 
     def _meta_content(self, tree: HTMLParser, selector: str, *, attr: str = "content") -> str | None:
-        return self._attr(tree.css_first(selector), attr)
+        value = self._attr(tree.css_first(selector), attr)
+        if value is None:
+            return None
+        return normalize_whitespace(unescape(value))
 
     def _normalize_detail_url(self, href: str | None) -> str | None:
         normalized_href = normalize_whitespace(href)
@@ -484,7 +539,14 @@ class AlzaScraper(BaseMetadataScraper):
             return False
         if len(normalized) < 50:
             return False
+        if normalized.startswith(("{", "[")):
+            return False
         if self._patterns.price_like.match(normalized):
+            return False
+        normalized_match = normalize_match_text(normalized)
+        if "cookies" in normalized_match:
+            return False
+        if '"@context"' in normalized or "schema.org" in normalized:
             return False
 
         blocked_prefixes = (

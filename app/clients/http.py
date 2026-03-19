@@ -39,8 +39,9 @@ class HttpClient:
         url: str,
         *,
         params: Mapping[str, str | int | float | None] | None = None,
+        extra_headers: Mapping[str, str] | None = None,
     ) -> str:
-        response = await self._request(url, params=params)
+        response = await self._request(url, params=params, extra_headers=extra_headers)
         return response.text
 
     async def get_json(
@@ -48,11 +49,15 @@ class HttpClient:
         url: str,
         *,
         params: Mapping[str, str | int | float | None] | None = None,
+        extra_headers: Mapping[str, str] | None = None,
     ) -> Any:
         response = await self._request(
             url,
             params=params,
-            extra_headers={"Accept": "application/json"},
+            extra_headers={
+                "Accept": "application/json",
+                **(dict(extra_headers) if extra_headers is not None else {}),
+            },
         )
         return response.json()
 

@@ -19,10 +19,12 @@ class RecordingHttpClient:
     def __init__(self) -> None:
         self.last_url: str | None = None
         self.last_params: dict[str, Any] | None = None
+        self.last_extra_headers: dict[str, str] | None = None
 
     async def get_text(self, url: str, *args, **kwargs) -> str:
         self.last_url = url
         self.last_params = kwargs.get("params")
+        self.last_extra_headers = kwargs.get("extra_headers")
         return ""
 
     @property
@@ -71,6 +73,34 @@ def test_parse_detail_page_fixture_extracts_enriched_metadata() -> None:
     assert enriched.detail_loaded is True
 
 
+def test_parse_detail_page_prefers_open_graph_description_over_noisy_content() -> None:
+    html = """
+    <html lang="cs">
+      <head>
+        <meta property="og:url" content="https://www.alza.cz/media/1984-d6308258.htm" />
+        <meta name="og:description" content="Antiutopický román George Orwella 1984 v novém audioknižním zpracování&nbsp;Byl jasný, studený dubnový den." />
+      </head>
+      <body>
+        <main>
+          <h1>1984</h1>
+          <div id="description">
+            <div class="popis__content" id="descriptionContent"></div>
+          </div>
+          <p>{"@context":"https://schema.org","description":"json noise"}</p>
+          <p>AudioStory s.r.o., 16000 Praha 6, info@example.cz</p>
+        </main>
+      </body>
+    </html>
+    """
+
+    parsed = build_scraper().parse_detail_page(html)
+
+    assert (
+        parsed.description
+        == "Antiutopický román George Orwella 1984 v novém audioknižním zpracování Byl jasný, studený dubnový den."
+    )
+
+
 def test_search_uses_compound_upstream_query_when_author_is_provided() -> None:
     http_client = RecordingHttpClient()
     scraper = AlzaScraper(http_client=http_client)  # type: ignore[arg-type]
@@ -82,3 +112,5 @@ def test_search_uses_compound_upstream_query_when_author_is_provided() -> None:
 
     assert http_client.last_url == scraper.MOBILE_SEARCH_URL
     assert http_client.last_params == {"exps": "1984 George Orwell"}
+    assert http_client.last_extra_headers is not None
+    assert http_client.last_extra_headers["User-Agent"].startswith("Mozilla/5.0")
