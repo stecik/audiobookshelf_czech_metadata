@@ -20,27 +20,9 @@ FastAPI service that implements the Audiobookshelf custom metadata provider cont
 - [Radioteka](https://www.radioteka.cz/)
 - [Rozhlas Hry a audioknihy](https://temata.rozhlas.cz/hry-a-cetba)
 
-It exposes:
+## API Documentation
 
-- `GET /health`
-- `GET /search?query=...&author=...`
-- `GET /alza/health` and `GET /alza/search?...`
-- `GET /albatrosmedia/health` and `GET /albatrosmedia/search?...`
-- `GET /audiolibrix/health` and `GET /audiolibrix/search?...`
-- `GET /audioteka/health` and `GET /audioteka/search?...`
-- `GET /databazeknih/health` and `GET /databazeknih/search?...`
-- `GET /kanopa/health` and `GET /kanopa/search?...`
-- `GET /knihydobrovsky/health` and `GET /knihydobrovsky/search?...`
-- `GET /kosmas/health` and `GET /kosmas/search?...`
-- `GET /luxor/health` and `GET /luxor/search?...`
-- `GET /megaknihy/health` and `GET /megaknihy/search?...`
-- `GET /naposlech/health` and `GET /naposlech/search?...`
-- `GET /onehotbook/health` and `GET /onehotbook/search?...`
-- `GET /o2knihovna/health` and `GET /o2knihovna/search?...`
-- `GET /palmknihy/health` and `GET /palmknihy/search?...`
-- `GET /progresguru/health` and `GET /progresguru/search?...`
-- `GET /radioteka/health` and `GET /radioteka/search?...`
-- `GET /rozhlas/health` and `GET /rozhlas/search?...`
+- [OpenAPI](https://stecik.github.io/audiobookshelf_czech_metadata/)
 
 Audiobookshelf 2.8.0+ can call external metadata providers over HTTP. This service searches configured sources, ranks matches, normalizes the result into the ABS `{"matches": [...]}` shape, and returns it to Audiobookshelf.
 

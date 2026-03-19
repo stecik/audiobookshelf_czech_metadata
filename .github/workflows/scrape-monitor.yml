@@ -140,6 +140,15 @@ jobs:
             smoke-report.md
             docker-logs.txt
 
+      - name: Show smoke report
+        id: show_report
+        if: always()
+        shell: bash
+        run: |
+          echo "Smoke report:"
+          echo
+          cat smoke-report.md
+
       - name: Send failure email
         id: send_email
         if: failure() && env.SMTP_CONNECTION_URL != '' && env.SMOKE_REPORT_EMAIL_FROM != '' && env.SMOKE_REPORT_EMAIL_TO != ''
