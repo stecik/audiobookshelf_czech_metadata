@@ -7,7 +7,7 @@ from typing import Any
 
 from selectolax.parser import HTMLParser, Node
 
-from app.clients.http import HttpClient
+from app.clients.http import HttpClient, UpstreamFetchError
 from app.models import SourceBook
 from app.services.scrapers.base import BaseMetadataScraper
 from app.utils.text import (
@@ -52,6 +52,8 @@ class RozhlasScraper(BaseMetadataScraper):
 
     BASE_URL = "https://temata.rozhlas.cz"
     SEARCH_URL = f"{BASE_URL}/hry-a-cetba"
+    API_SEARCH_URL = "https://api.mujrozhlas.cz/search"
+    API_PAGE_SIZE = 30
     DEFAULT_PUBLISHER = "Český rozhlas"
 
     DATA_LAYER_RE = re.compile(r"dataLayer\s*=\s*(?P<payload>\[.*?\])\s*;", re.S)
@@ -136,10 +138,92 @@ class RozhlasScraper(BaseMetadataScraper):
         return books
 
     async def _search_books(self, search_term: str) -> list[SourceBook]:
+        try:
+            legacy_results = await self._search_legacy_topic(search_term)
+        except UpstreamFetchError as legacy_error:
+            api_results = await self._search_api(search_term)
+            if api_results:
+                return api_results
+            raise legacy_error
+        if legacy_results:
+            return legacy_results
+        return await self._search_api(search_term)
+
+    async def _search_legacy_topic(self, search_term: str) -> list[SourceBook]:
         html = await self._http_client.get_text(
             self.SEARCH_URL, params={"combine": search_term}
         )
         return self.parse_search_results(html)
+
+    async def _search_api(self, search_term: str) -> list[SourceBook]:
+        payload = await self._http_client.get_json(
+            self.API_SEARCH_URL,
+            params={
+                "filter[fulltext][eq]": search_term,
+                "page[limit]": self.API_PAGE_SIZE,
+            },
+        )
+        return self.parse_api_search_results(payload)
+
+    def parse_api_search_results(self, payload: object) -> list[SourceBook]:
+        if not isinstance(payload, dict):
+            return []
+        data = payload.get("data")
+        if not isinstance(data, list):
+            return []
+
+        books: list[SourceBook] = []
+        for item in data:
+            book = self._book_from_api_item(item)
+            if book is not None:
+                books.append(book)
+        return books
+
+    def _book_from_api_item(self, item: object) -> SourceBook | None:
+        if not isinstance(item, dict):
+            return None
+
+        attributes = item.get("attributes")
+        if not isinstance(attributes, dict):
+            return None
+
+        raw_title = self._string(attributes.get("title")) or self._string(
+            attributes.get("shortTitle")
+        )
+        title = normalize_title(raw_title)
+        if title is None:
+            return None
+
+        authors: list[str] = []
+        inferred_author, inferred_title = self._infer_author_prefix(title)
+        if inferred_author is not None and inferred_title is not None:
+            authors = [inferred_author]
+            title = inferred_title
+
+        source_id = self._api_source_id(item)
+        if source_id is None:
+            return None
+
+        description = self._html_text(self._string(attributes.get("description")))
+        genres = self._api_genres(item)
+        duration_minutes = self._api_duration_minutes(attributes.get("audioLinks"))
+
+        return SourceBook(
+            source=self.source_name,
+            source_id=source_id,
+            title=title,
+            detail_url=self._api_detail_url(item),
+            authors=authors,
+            narrators=self._api_narrators(description),
+            publishers=[self.DEFAULT_PUBLISHER],
+            published_year=self._api_published_year(attributes),
+            description=description,
+            cover_url=self._api_cover_url(attributes.get("asset")),
+            genres=genres,
+            language="cs",
+            duration_minutes=duration_minutes,
+            detail_loaded=True,
+        )
 
     def parse_detail_page(
         self, html: str, *, partial: SourceBook | None = None
@@ -274,6 +358,142 @@ class RozhlasScraper(BaseMetadataScraper):
                 continue
             values[label] = value
         return values
+
+    def _api_source_id(self, item: dict[str, Any]) -> str | None:
+        remote = self._api_remote_data(item)
+        remote_id = self._string(remote.get("id")) if remote is not None else None
+        return remote_id or self._string(item.get("id"))
+
+    def _api_detail_url(self, item: dict[str, Any]) -> str:
+        item_id = self._string(item.get("id")) or self._api_source_id(item) or "unknown"
+        item_type = self._string(item.get("type")) or "items"
+        return f"https://api.mujrozhlas.cz/{item_type}s/{item_id}"
+
+    def _api_remote_data(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        extra_data = item.get("extraData")
+        if not isinstance(extra_data, dict):
+            return None
+        remote = extra_data.get("remote")
+        return remote if isinstance(remote, dict) else None
+
+    def _api_genres(self, item: dict[str, Any]) -> list[str]:
+        return unique_preserving_order(
+            [
+                *self._api_relationship_titles(item, "genres"),
+                *self._api_category_titles(item),
+            ]
+        )
+
+    def _api_relationship_titles(
+        self, item: dict[str, Any], relationship_name: str
+    ) -> list[str]:
+        relationships = item.get("relationships")
+        if not isinstance(relationships, dict):
+            return []
+        relationship = relationships.get(relationship_name)
+        if not isinstance(relationship, dict):
+            return []
+        data = relationship.get("data")
+        if not isinstance(data, list):
+            return []
+        return [
+            title
+            for relation_item in data
+            if isinstance(relation_item, dict)
+            if (
+                title := self._api_attribute_title(
+                    relation_item.get("attributes")
+                )
+            )
+            is not None
+        ]
+
+    def _api_category_titles(self, item: dict[str, Any]) -> list[str]:
+        extra_data = item.get("extraData")
+        if not isinstance(extra_data, dict):
+            return []
+        categories = extra_data.get("categories")
+        if not isinstance(categories, dict):
+            return []
+        data = categories.get("data")
+        if not isinstance(data, list):
+            return []
+        return [
+            title
+            for category in data
+            if isinstance(category, dict)
+            if (title := self._api_attribute_title(category.get("attributes")))
+            is not None
+        ]
+
+    def _api_attribute_title(self, attributes: object) -> str | None:
+        if not isinstance(attributes, dict):
+            return None
+        return normalize_whitespace(self._string(attributes.get("title")))
+
+    def _api_cover_url(self, asset: object) -> str | None:
+        if not isinstance(asset, dict):
+            return None
+        return to_absolute_url(self.BASE_URL, self._string(asset.get("url")))
+
+    def _api_published_year(self, attributes: dict[str, Any]) -> str | None:
+        return (
+            extract_year(self._string(attributes.get("since")))
+            or extract_year(self._string(attributes.get("lastEpisodeSince")))
+            or extract_year(self._string(attributes.get("updated")))
+        )
+
+    def _api_duration_minutes(self, audio_links: object) -> int | None:
+        if not isinstance(audio_links, list):
+            return None
+
+        durations = [
+            duration
+            for item in audio_links
+            if isinstance(item, dict)
+            if isinstance((duration := item.get("duration")), int)
+        ]
+        if not durations:
+            return None
+        return max(1, max(durations) // 60)
+
+    def _api_narrators(self, description: str | None) -> list[str]:
+        lines = [
+            line
+            for raw_line in (description or "").split("\n")
+            if (line := normalize_whitespace(raw_line)) is not None
+        ]
+        narrators: list[str] = []
+        for line in lines:
+            label, value = self._extract_label_value(line)
+            if label is None or value is None:
+                continue
+            normalized_label = normalize_match_text(label)
+            if normalized_label in {
+                *self.PERFORMANCE_LABELS,
+                "osoby a obsazeni",
+                "obsazeni",
+            }:
+                narrators.extend(self._split_people(value))
+        return unique_preserving_order(narrators)
+
+    def _html_text(self, html: str | None) -> str | None:
+        if html is None:
+            return None
+        line_broken_html = re.sub(r"(?i)<\s*br\s*/?\s*>|<\s*/\s*p\s*>", "\n", html)
+        body = HTMLParser(line_broken_html).body
+        if body is None:
+            return normalize_whitespace(html)
+        try:
+            text = body.text(separator="\n", strip=True)
+        except TypeError:
+            text = body.text()
+        lines = [
+            line
+            for raw_line in text.replace("\r", "").split("\n")
+            if (line := normalize_whitespace(raw_line)) is not None
+        ]
+        return "\n".join(lines) or normalize_whitespace(html)
 
     def _search_tags(self, item: Node) -> list[str]:
         return unique_preserving_order(

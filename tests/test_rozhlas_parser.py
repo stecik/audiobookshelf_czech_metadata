@@ -15,16 +15,31 @@ class DummyHttpClient:
 
 
 class RecordingHttpClient:
-    def __init__(self, *, responses_by_query: dict[str, str]) -> None:
+    def __init__(
+        self,
+        *,
+        responses_by_query: dict[str, str],
+        json_responses_by_query: dict[str, object] | None = None,
+    ) -> None:
         self._responses_by_query = responses_by_query
-        self.calls: list[tuple[str, dict[str, str | int | float | None] | None]] = []
+        self._json_responses_by_query = json_responses_by_query or {}
+        self.calls: list[
+            tuple[str, str, dict[str, str | int | float | None] | None]
+        ] = []
 
     async def get_text(self, url: str, *, params=None) -> str:
-        self.calls.append((url, params))
+        self.calls.append(("text", url, params))
         query = (params or {}).get("combine")
         if query not in self._responses_by_query:
             raise AssertionError(f"Unexpected query: {query}")
         return self._responses_by_query[query]
+
+    async def get_json(self, url: str, *, params=None) -> object:
+        self.calls.append(("json", url, params))
+        query = (params or {}).get("filter[fulltext][eq]")
+        if query not in self._json_responses_by_query:
+            raise AssertionError(f"Unexpected API query: {query}")
+        return self._json_responses_by_query[query]
 
 
 def build_scraper(http_client=None) -> RozhlasScraper:
@@ -120,14 +135,80 @@ def test_search_falls_back_to_query_only_when_combined_query_has_no_results() ->
         responses_by_query={
             "Skořápka Ian McEwan": empty_html,
             "Skořápka": listing_html,
-        }
+        },
+        json_responses_by_query={"Skořápka Ian McEwan": {"data": []}},
     )
     scraper = build_scraper(http_client=http_client)
 
     results = asyncio.run(scraper.search(query="Skořápka", author="Ian McEwan"))
 
-    assert [call[1] for call in http_client.calls] == [
+    assert [call[2] for call in http_client.calls] == [
         {"combine": "Skořápka Ian McEwan"},
+        {
+            "filter[fulltext][eq]": "Skořápka Ian McEwan",
+            "page[limit]": scraper.API_PAGE_SIZE,
+        },
         {"combine": "Skořápka"},
     ]
     assert any(book.source_id == "9602125" for book in results)
+
+
+def test_search_uses_mujrozhlas_api_when_legacy_topic_has_no_results() -> None:
+    empty_html = "<section id='b008d'><div class='view-empty'>empty</div></section>"
+    api_payload = {
+        "data": [
+            {
+                "id": "a202e915-fadc-3522-b660-7f306ab6c036",
+                "type": "episode",
+                "relationships": {
+                    "genres": {
+                        "data": [
+                            {"attributes": {"title": "Světová literatura"}},
+                        ]
+                    }
+                },
+                "extraData": {
+                    "categories": {
+                        "data": [
+                            {"attributes": {"title": "Hra", "type": "format"}},
+                            {"attributes": {"title": "Literatura", "type": "topic"}},
+                        ]
+                    },
+                    "remote": {"source": "drupal", "id": "9602125"},
+                },
+                "attributes": {
+                    "title": "Ian McEwan: Skořápka. Ivan Trojan, David Novotný a Bára Poláková v komické krimi parafrázi Hamleta",
+                    "description": (
+                        "<p>Rozhlasová adaptace novely.</p>"
+                        "Osoby a obsazení: Ivan Trojan (plod), Barbora Poláková (Trudy)<br>"
+                        "Premiéra: 24. 11. 2020"
+                    ),
+                    "asset": {
+                        "url": "https://portal.rozhlas.cz/sites/default/files/images/skorapka.jpg"
+                    },
+                    "audioLinks": [{"duration": 3900}],
+                    "since": "2026-03-15T20:00:00+01:00",
+                },
+            }
+        ]
+    }
+    http_client = RecordingHttpClient(
+        responses_by_query={"Skořápka": empty_html},
+        json_responses_by_query={"Skořápka": api_payload},
+    )
+    scraper = build_scraper(http_client=http_client)
+
+    results = asyncio.run(scraper.search(query="Skořápka"))
+
+    assert len(results) == 1
+    result = results[0]
+    assert result.source_id == "9602125"
+    assert result.title == "Skořápka. Ivan Trojan, David Novotný a Bára Poláková v komické krimi parafrázi Hamleta"
+    assert result.authors == ["Ian McEwan"]
+    assert result.narrators == ["Ivan Trojan (plod)", "Barbora Poláková (Trudy)"]
+    assert result.publishers == ["Český rozhlas"]
+    assert result.published_year == "2026"
+    assert result.cover_url == "https://portal.rozhlas.cz/sites/default/files/images/skorapka.jpg"
+    assert result.genres == ["Světová literatura", "Hra", "Literatura"]
+    assert result.duration_minutes == 65
+    assert result.detail_loaded is True

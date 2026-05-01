@@ -78,6 +78,13 @@ def normalize_match_text(text: str | None) -> str:
     return NON_ALNUM_RE.sub(" ", ascii_text.lower()).strip()
 
 
+def slugify_text(text: str | None) -> str:
+    normalized = normalize_match_text(text)
+    if not normalized:
+        return ""
+    return normalized.replace(" ", "-")
+
+
 def parse_duration_to_minutes(text: str | None) -> int | None:
     normalized = normalize_whitespace(text)
     if normalized is None:

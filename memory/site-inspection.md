@@ -54,6 +54,12 @@ Date: 2026-03-15
 - The embedded audiobook payload explicitly includes `name`, `published_at`, `duration`, `tracks_duration_in_ms`, `content_language`, and embedded author, narrator, publisher, and category lists.
 - Long descriptions are referenced via `$27` / `$28`-style tokens, with the actual strings pushed in subsequent script tags.
 
+## Unavailable-title behavior
+
+- Live check on 2026-03-20: the unavailable title `https://audioteka.com/cz/audiokniha/maigretuv-zlodej/` still returns a metadata-rich detail page.
+- The public search route `https://audioteka.com/cz/vyhledavani/?phrase=Maigretův%20zloděj` currently returns `total: 0` for that title even though the detail page still exists.
+- The scraper therefore needs a detail-page fallback for exact-title queries: when search does not yield an exact title hit, it can safely probe the guessed slug URL `/cz/audiokniha/<normalized-title>/` and keep the result only if the returned title matches the query exactly.
+
 ## Internal API check
 
 - The site exposes stable public detail links and embedded structured payloads in HTML.

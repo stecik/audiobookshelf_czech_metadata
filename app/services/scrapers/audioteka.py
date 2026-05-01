@@ -8,6 +8,7 @@ from typing import Any
 from selectolax.parser import HTMLParser
 
 from app.clients.http import HttpClient
+from app.clients.http import UpstreamFetchError
 from app.models import SourceBook
 from app.services.scrapers.base import BaseMetadataScraper
 from app.utils.text import (
@@ -16,6 +17,7 @@ from app.utils.text import (
     normalize_match_text,
     normalize_title,
     normalize_whitespace,
+    slugify_text,
     to_absolute_url,
     unique_preserving_order,
 )
@@ -47,7 +49,12 @@ class AudiotekaScraper(BaseMetadataScraper):
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
         phrase = self._compose_search_phrase(query=query, author=author)
         html = await self._http_client.get_text(self.SEARCH_URL, params={"phrase": phrase})
-        return self.parse_search_results(html)
+        search_results = self.parse_search_results(html)
+        if self._has_strong_query_match(search_results, query=query):
+            return search_results
+
+        fallback_results = await self._search_unavailable_detail_page(query=query, author=author)
+        return self._merge_results(search_results, fallback_results)
 
     async def enrich(self, item: SourceBook) -> SourceBook:
         html = await self._http_client.get_text(item.detail_url)
@@ -148,7 +155,7 @@ class AudiotekaScraper(BaseMetadataScraper):
 
         return SourceBook(
             source=self.source_name,
-            source_id="unknown",
+            source_id=self._string(audiobook.get("id")) if audiobook is not None else "unknown",
             title=title,
             detail_url="",
             authors=authors,
@@ -171,6 +178,83 @@ class AudiotekaScraper(BaseMetadataScraper):
         if normalize_match_text(cleaned_author) in normalize_match_text(cleaned_query):
             return cleaned_query
         return f"{cleaned_query} {cleaned_author}"
+
+    async def _search_unavailable_detail_page(
+        self,
+        *,
+        query: str,
+        author: str | None,
+    ) -> list[SourceBook]:
+        slug = slugify_text(query)
+        if not slug:
+            return []
+
+        detail_url = to_absolute_url(self.BASE_URL, f"/cz/audiokniha/{slug}/")
+        if detail_url is None:
+            return []
+
+        try:
+            html = await self._http_client.get_text(detail_url)
+        except UpstreamFetchError:
+            return []
+
+        candidate = self.parse_detail_page(html).model_copy(
+            update={
+                "source_id": self._extract_detail_source_id(html) or slug,
+                "detail_url": detail_url,
+            }
+        )
+        if not self._matches_detail_fallback(candidate, query=query, author=author):
+            return []
+        return [candidate]
+
+    def _has_strong_query_match(self, books: list[SourceBook], *, query: str) -> bool:
+        normalized_query = normalize_match_text(query)
+        if not normalized_query:
+            return False
+        return any(
+            normalize_match_text(book.title) == normalized_query
+            for book in books
+        )
+
+    def _matches_detail_fallback(
+        self,
+        book: SourceBook,
+        *,
+        query: str,
+        author: str | None,
+    ) -> bool:
+        normalized_query = normalize_match_text(query)
+        normalized_title = normalize_match_text(book.title)
+        if not normalized_query or normalized_title != normalized_query:
+            return False
+
+        normalized_author = normalize_match_text(author)
+        if not normalized_author:
+            return True
+
+        normalized_book_authors = normalize_match_text(" ".join(book.authors))
+        return bool(normalized_book_authors) and normalized_author in normalized_book_authors
+
+    def _merge_results(
+        self,
+        primary: list[SourceBook],
+        fallback: list[SourceBook],
+    ) -> list[SourceBook]:
+        if not fallback:
+            return primary
+
+        deduplicated = {
+            (book.source_id, book.detail_url): book
+            for book in [*primary, *fallback]
+        }
+        return list(deduplicated.values())
+
+    def _extract_detail_source_id(self, html: str) -> str | None:
+        audiobook = self._extract_detail_payload(html)
+        if audiobook is None:
+            return None
+        return self._string(audiobook.get("id")) or self._string(audiobook.get("reference_id"))
 
     def _extract_search_payload(self, html: str) -> dict[str, Any] | None:
         match = self.SEARCH_PRODUCTS_RE.search(html)

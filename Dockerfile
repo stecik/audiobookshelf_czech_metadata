@@ -16,4 +16,4 @@ RUN uv sync --locked --no-dev
 
 EXPOSE 8000
 
-CMD ["uv", "run", "python", "-m", "app.main"]
+CMD ["/app/.venv/bin/python", "-m", "app.main"]

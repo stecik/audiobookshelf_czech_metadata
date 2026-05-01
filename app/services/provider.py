@@ -408,6 +408,8 @@ class MetadataProviderService:
         )
 
     def _needs_detail_enrichment(self, book: SourceBook) -> bool:
+        if book.detail_loaded:
+            return False
         return any(
             [
                 not book.description,
