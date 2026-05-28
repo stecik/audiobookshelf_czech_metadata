@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{base_url}}/healthz"
+method: GET
+order: 1000

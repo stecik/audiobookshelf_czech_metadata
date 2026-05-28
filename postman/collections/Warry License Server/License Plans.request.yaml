@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/license/plans"
+method: GET
+headers:
+  Authorization: Bearer {{access_token}}
+order: 4000

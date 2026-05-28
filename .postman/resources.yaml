@@ -1,9 +1,13 @@
 # Use this workspace to collaborate
 workspace:
   id: 6d742c8b-3ad9-4d47-81b8-9a609f519e84
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
 cloudResources:
   collections:
     ..\postman\collections\ABS metadata provider: 42760612-3abc742a-9b13-45c2-85d7-107c0b6b59e7
+    ..\postman\collections\Warry License Server: caf69cec-f02a-43ea-acfc-8c935cdbee68
 
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:

@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{base_url}}/license/redeem-coupon"
+method: POST
+headers:
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "code": "TEST"
+    }
+order: 8000

@@ -1,6 +1,7 @@
 $kind: http-request
-url: http://localhost:8000/audiolibrix/search?query=DNA
+name: audiolibrix
+url: http://localhost:8000/audiolibrix/search?query=1984
 method: GET
 queryParams:
-  query: DNA
+  query: "1984"
 order: 4000

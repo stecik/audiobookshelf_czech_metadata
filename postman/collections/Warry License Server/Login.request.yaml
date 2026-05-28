@@ -1,0 +1,26 @@
+$kind: http-request
+name: Login
+url: "{{base_url}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "{{email}}",
+      "password": "{{password}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const r = pm.response.json();
+      if (r.tokens && r.tokens.access_token) {
+          pm.environment.set('access_token', r.tokens.access_token);
+      }
+      if (r.tokens && r.tokens.refresh_token) {
+          pm.environment.set('refresh_token', r.tokens.refresh_token);
+      }
+      pm.test('200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 2000

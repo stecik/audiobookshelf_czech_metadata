@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/license/status"
+method: GET
+headers:
+  Authorization: Bearer {{access_token}}
+order: 5000

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from app.clients.http import UpstreamFetchError
 from app.models import SourceBook
 from app.services.scrapers.naposlech import NaposlechScraper
 
@@ -31,6 +32,21 @@ class RecordingHttpClient:
         return []
 
 
+class RestRestrictedHttpClient:
+    def __init__(self, html: str) -> None:
+        self.html = html
+        self.text_url: str | None = None
+        self.text_params: dict[str, Any] | None = None
+
+    async def get_json(self, url: str, *args, **kwargs) -> object:
+        raise UpstreamFetchError(url=url, reason="upstream returned HTTP 401", timeout_seconds=8.0)
+
+    async def get_text(self, url: str, *args, **kwargs) -> str:
+        self.text_url = url
+        self.text_params = kwargs.get("params")
+        return self.html
+
+
 def build_scraper() -> NaposlechScraper:
     return NaposlechScraper(http_client=DummyHttpClient())  # type: ignore[arg-type]
 
@@ -49,6 +65,56 @@ def test_parse_search_results_fixture_extracts_api_matches() -> None:
         == "Ve zbídačelém Londýně na území superstátu Oceánie se v dubnu 1984 úředník Ministerstva pravdy Winston Smith přiměje vzepřít."
     )
     assert results[0].detail_loaded is False
+
+
+def test_parse_search_page_extracts_audiobook_cards_only() -> None:
+    html = """
+    <div class="uael-post-wrapper">
+      <div class="uael-post__thumbnail">
+        <a href="https://naposlech.cz/audiokniha/1984-tymp/" title="1984">
+          <img src="https://naposlech.cz/wp-content/uploads/2024/09/8681-300x300.jpg" />
+        </a>
+      </div>
+      <div class="uael-post__terms">
+        <a>Klasika</a><a>Společenská próza</a>
+      </div>
+      <h3 class="uael-post__title"><a href="https://naposlech.cz/audiokniha/1984-tymp/">1984</a></h3>
+      <div class="uael-post__excerpt">Naděje na změnu se mu naskytne...</div>
+      <a class="uael-post__read-more" aria-labelledby="uael-post-107223"></a>
+    </div>
+    <div class="uael-post-wrapper témata">
+      <h3 class="uael-post__title"><a href="https://naposlech.cz/temata/sestkrat-1984-2/">Šestkrát 1984</a></h3>
+    </div>
+    """
+
+    results = build_scraper().parse_search_page(html)
+
+    assert len(results) == 1
+    assert results[0].source_id == "107223"
+    assert results[0].title == "1984"
+    assert results[0].detail_url == "https://naposlech.cz/audiokniha/1984-tymp/"
+    assert results[0].description == "Naděje na změnu se mu naskytne..."
+    assert results[0].cover_url == "https://naposlech.cz/wp-content/uploads/2024/09/8681-300x300.jpg"
+    assert results[0].genres == ["Klasika", "Společenská próza"]
+    assert results[0].detail_loaded is False
+
+
+def test_search_falls_back_to_server_rendered_page_when_rest_is_restricted() -> None:
+    html = """
+    <div class="uael-post-wrapper">
+      <h3 class="uael-post__title"><a href="/audiokniha/1984-tymp/">1984</a></h3>
+      <a class="uael-post__read-more" aria-labelledby="uael-post-107223"></a>
+    </div>
+    """
+    http_client = RestRestrictedHttpClient(html)
+    scraper = NaposlechScraper(http_client=http_client)  # type: ignore[arg-type]
+
+    results = asyncio.run(scraper.search(query=" 1984 ", author="George Orwell"))
+
+    assert len(results) == 1
+    assert results[0].detail_url == "https://naposlech.cz/audiokniha/1984-tymp/"
+    assert http_client.text_url == scraper.SEARCH_PAGE_URL
+    assert http_client.text_params == {"s": "1984"}
 
 
 def test_parse_detail_page_fixture_extracts_enriched_metadata() -> None:

@@ -1,0 +1,12 @@
+name: Warry
+values:
+  - key: base_url
+    value: ''
+  - key: email
+    value: ''
+  - key: password
+    value: ''
+  - key: access_token
+    value: ''
+  - key: refresh_token
+    value: ''

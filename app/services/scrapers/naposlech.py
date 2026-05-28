@@ -7,7 +7,7 @@ from typing import Any
 
 from selectolax.parser import HTMLParser, Node
 
-from app.clients.http import HttpClient
+from app.clients.http import HttpClient, UpstreamFetchError
 from app.models import SourceBook
 from app.services.scrapers.base import BaseMetadataScraper
 from app.utils.text import (
@@ -22,6 +22,12 @@ from app.utils.text import (
 
 @dataclass(frozen=True)
 class NaposlechSelectors:
+    search_cards: str = ".uael-post-wrapper"
+    search_title: str = ".uael-post__title a"
+    search_thumbnail: str = ".uael-post__thumbnail img"
+    search_excerpt: str = ".uael-post__excerpt"
+    search_genres: str = ".uael-post__terms a"
+    search_read_more: str = ".uael-post__read-more"
     detail_title: str = "h1.elementor-heading-title"
     detail_cover: str = ".elementor-widget-theme-post-featured-image img"
     detail_description: str = ".elementor-widget-theme-post-content .elementor-widget-container"
@@ -36,6 +42,7 @@ class NaposlechScraper(BaseMetadataScraper):
 
     BASE_URL = "https://naposlech.cz"
     SEARCH_URL = f"{BASE_URL}/wp-json/wp/v2/audiokniha"
+    SEARCH_PAGE_URL = BASE_URL
     SEARCH_PAGE_SIZE = 10
     ATTRIBUTION_RE = re.compile(r"\btext:\s*(?P<publisher>.+)$", re.IGNORECASE)
     MISSING_VALUE_MARKERS = {"-", "–"}
@@ -46,14 +53,22 @@ class NaposlechScraper(BaseMetadataScraper):
 
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
         del author
-        payload = await self._http_client.get_json(
-            self.SEARCH_URL,
-            params={
-                "search": normalize_whitespace(query) or "",
-                "per_page": self.SEARCH_PAGE_SIZE,
-            },
-        )
-        return self.parse_search_results(payload)
+        cleaned_query = normalize_whitespace(query) or ""
+        try:
+            payload = await self._http_client.get_json(
+                self.SEARCH_URL,
+                params={
+                    "search": cleaned_query,
+                    "per_page": self.SEARCH_PAGE_SIZE,
+                },
+            )
+            return self.parse_search_results(payload)
+        except UpstreamFetchError:
+            html = await self._http_client.get_text(
+                self.SEARCH_PAGE_URL,
+                params={"s": cleaned_query},
+            )
+            return self.parse_search_page(html)
 
     async def enrich(self, item: SourceBook) -> SourceBook:
         html = await self._http_client.get_text(item.detail_url)
@@ -86,6 +101,53 @@ class NaposlechScraper(BaseMetadataScraper):
                     detail_loaded=False,
                 )
             )
+
+        return books
+
+    def parse_search_page(self, html: str) -> list[SourceBook]:
+        tree = HTMLParser(html)
+        books: list[SourceBook] = []
+        seen_urls: set[str] = set()
+
+        for card in tree.css(self._selectors.search_cards):
+            title_link = card.css_first(self._selectors.search_title)
+            detail_url = self._attr(title_link, "href")
+            if detail_url is None or "/audiokniha/" not in detail_url:
+                continue
+
+            detail_url = self._absolute_url(detail_url)
+            if detail_url in seen_urls:
+                continue
+
+            title = normalize_title(self._text(title_link))
+            if title is None:
+                continue
+
+            read_more = card.css_first(self._selectors.search_read_more)
+            source_id = self._source_id_from_read_more(read_more) or self._source_id_from_url(
+                detail_url
+            )
+            cover_node = card.css_first(self._selectors.search_thumbnail)
+            description = self._clean_description(
+                self._text(card.css_first(self._selectors.search_excerpt))
+            )
+            genres = self._texts(card.css(self._selectors.search_genres))
+
+            books.append(
+                SourceBook(
+                    source=self.source_name,
+                    source_id=source_id,
+                    title=title,
+                    detail_url=detail_url,
+                    description=description,
+                    cover_url=self._absolute_url(self._attr(cover_node, "src")),
+                    genres=genres,
+                    detail_loaded=False,
+                )
+            )
+            seen_urls.add(detail_url)
+            if len(books) >= self.SEARCH_PAGE_SIZE:
+                break
 
         return books
 
@@ -237,6 +299,27 @@ class NaposlechScraper(BaseMetadataScraper):
         if node is None:
             return None
         return self._attr(node, "content")
+
+    def _source_id_from_read_more(self, node: Node | None) -> str | None:
+        labelled_by = self._attr(node, "aria-labelledby")
+        if labelled_by is None:
+            return None
+        match = re.search(r"uael-post-(\d+)", labelled_by)
+        if match is None:
+            return None
+        return match.group(1)
+
+    def _source_id_from_url(self, url: str) -> str:
+        return url.rstrip("/").rsplit("/", 1)[-1]
+
+    def _absolute_url(self, url: str | None) -> str | None:
+        if url is None:
+            return None
+        if url.startswith("//"):
+            return f"https:{url}"
+        if url.startswith("/"):
+            return f"{self.BASE_URL}{url}"
+        return url
 
     def _string(self, value: object) -> str | None:
         if value is None:

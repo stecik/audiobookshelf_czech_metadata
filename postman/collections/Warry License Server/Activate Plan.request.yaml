@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/license/activate-plan"
+method: POST
+headers:
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "plan": "monthly",
+      "receipt": "sub_xxx"
+    }
+order: 7000

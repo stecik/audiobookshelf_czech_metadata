@@ -190,14 +190,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--retry-attempts",
         type=int,
-        default=int(os.getenv("SMOKE_RETRY_ATTEMPTS", "3")),
+        default=int(os.getenv("SMOKE_RETRY_ATTEMPTS", "5")),
         help="Total attempts per endpoint check before failing.",
     )
     parser.add_argument(
         "--retry-wait-seconds",
         type=float,
-        default=float(os.getenv("SMOKE_RETRY_WAIT_SECONDS", "60")),
-        help="Delay between failed endpoint attempts.",
+        default=float(os.getenv("SMOKE_RETRY_WAIT_SECONDS", "300")),
+        help="Initial delay between failed endpoint attempts; doubles after each failure.",
     )
     return parser.parse_args()
 
@@ -445,7 +445,7 @@ async def run_with_retries(
             )
         last_result = result
         if attempt < total_attempts:
-            await asyncio.sleep(retry_wait_seconds)
+            await asyncio.sleep(retry_wait_seconds * (2 ** (attempt - 1)))
 
     assert last_result is not None
     if total_attempts == 1:
