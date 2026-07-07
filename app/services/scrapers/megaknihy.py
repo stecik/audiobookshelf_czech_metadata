@@ -51,6 +51,22 @@ class MegaknihyScraper(BaseMetadataScraper):
 
     BASE_URL = "https://www.megaknihy.cz"
     SEARCH_URL = f"{BASE_URL}/vyhledavani"
+    REQUEST_HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        ),
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,"
+            "image/avif,image/webp,*/*;q=0.8"
+        ),
+        "Accept-Language": "cs-CZ,cs;q=0.9,en;q=0.6",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+    }
 
     SEARCH_ANALYTICS_RE = re.compile(r"var gtm = (?P<payload>\{.*?\});\s*</script>", re.S)
     SOURCE_ID_RE = re.compile(r"/(?P<id>\d+)-[^/?#]+\.html", re.IGNORECASE)
@@ -100,11 +116,12 @@ class MegaknihyScraper(BaseMetadataScraper):
                 "orderway": "desc",
                 "search_query": normalize_whitespace(query) or "",
             },
+            extra_headers=self.REQUEST_HEADERS,
         )
         return self.parse_search_results(html)
 
     async def enrich(self, item: SourceBook) -> SourceBook:
-        html = await self._http_client.get_text(item.detail_url)
+        html = await self._http_client.get_text(item.detail_url, extra_headers=self.REQUEST_HEADERS)
         return self.parse_detail_page(html, partial=item)
 
     def parse_search_results(self, html: str) -> list[SourceBook]:

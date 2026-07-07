@@ -19,10 +19,12 @@ class RecordingHttpClient:
     def __init__(self) -> None:
         self.last_url: str | None = None
         self.last_params: dict[str, Any] | None = None
+        self.last_extra_headers: dict[str, str] | None = None
 
     async def get_text(self, url: str, *args, **kwargs) -> str:
         self.last_url = url
         self.last_params = kwargs.get("params")
+        self.last_extra_headers = kwargs.get("extra_headers")
         return ""
 
 
@@ -138,3 +140,5 @@ def test_search_uses_title_only_for_upstream_query_when_author_is_provided() -> 
         "orderway": "desc",
         "search_query": "Šikmý kostel",
     }
+    assert http_client.last_extra_headers is not None
+    assert http_client.last_extra_headers["User-Agent"].startswith("Mozilla/5.0")
