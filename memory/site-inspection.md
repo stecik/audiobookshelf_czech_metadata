@@ -284,6 +284,7 @@ Date: 2026-03-16
 - Result cards still render under `#product_list > li.ajax_block_product`, but title links now render as `a.product-name[title]` instead of only `h2 a[title]`.
 - Cover images now render under `.img-wrapper img` on the inspected search cards.
 - The card `.product-author` block can contain the manufacturer/publisher (`OneHotBook`) for the audiobook card, while the embedded `var gtm` payload still carries the real author (`Karin Lednická`) and manufacturer separately. Prefer GTM author metadata when present.
+- GitHub-hosted smoke on run `28865061297` still returned zero matches after the selector fix, while the same Docker image worked locally. The scraper now has a conservative GTM-only fallback for products whose analytics category explicitly includes `Audioknihy`.
 
 # Naposlech Site Inspection
 

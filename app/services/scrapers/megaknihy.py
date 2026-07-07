@@ -16,6 +16,7 @@ from app.utils.text import (
     normalize_match_text,
     normalize_title,
     normalize_whitespace,
+    slugify_text,
     to_absolute_url,
     unique_preserving_order,
 )
@@ -39,6 +40,7 @@ class MegaknihySelectors:
 
 @dataclass(frozen=True)
 class MegaknihySearchMetadata:
+    title: str | None
     authors: list[str]
     categories: list[str]
     publisher: str | None
@@ -109,6 +111,7 @@ class MegaknihyScraper(BaseMetadataScraper):
         tree = HTMLParser(html)
         analytics = self._extract_search_metadata(html)
         books: list[SourceBook] = []
+        seen_source_ids: set[str] = set()
 
         for item in tree.css(self._selectors.search_result_items):
             title_link = item.css_first(self._selectors.search_title_link)
@@ -154,7 +157,14 @@ class MegaknihyScraper(BaseMetadataScraper):
                     detail_loaded=False,
                 )
             )
+            seen_source_ids.add(source_id)
 
+        books.extend(
+            self._source_books_from_search_metadata(
+                analytics,
+                seen_source_ids=seen_source_ids,
+            )
+        )
         return books
 
     def parse_detail_page(self, html: str, *, partial: SourceBook | None = None) -> SourceBook:
@@ -261,12 +271,67 @@ class MegaknihyScraper(BaseMetadataScraper):
             authors = self._people_from_values(raw_authors if isinstance(raw_authors, list) else [])
 
             metadata[source_id] = MegaknihySearchMetadata(
+                title=self._string(product.get("name")),
                 authors=authors,
                 categories=categories,
                 publisher=self._string(product.get("manufacturer")),
             )
 
         return metadata
+
+    def _source_books_from_search_metadata(
+        self,
+        metadata: dict[str, MegaknihySearchMetadata],
+        *,
+        seen_source_ids: set[str],
+    ) -> list[SourceBook]:
+        books: list[SourceBook] = []
+        for source_id, item in metadata.items():
+            if source_id in seen_source_ids or item.title is None:
+                continue
+
+            detail_url = self._detail_url_from_metadata(source_id=source_id, metadata=item)
+            if detail_url is None:
+                continue
+
+            if not self._is_audiobook_result(
+                raw_title=item.title,
+                detail_url=detail_url,
+                ribbons=[],
+                categories=item.categories,
+            ):
+                continue
+
+            cleaned_title = self._clean_title(item.title)
+            books.append(
+                SourceBook(
+                    source=self.source_name,
+                    source_id=source_id,
+                    title=cleaned_title or item.title,
+                    detail_url=detail_url,
+                    authors=item.authors,
+                    narrators=self._extract_narrators(item.title),
+                    publishers=[item.publisher] if item.publisher else [],
+                    genres=self._filter_search_categories(item.categories),
+                    detail_loaded=False,
+                )
+            )
+        return books
+
+    def _detail_url_from_metadata(
+        self,
+        *,
+        source_id: str,
+        metadata: MegaknihySearchMetadata,
+    ) -> str | None:
+        if not metadata.title:
+            return None
+        if "audioknihy" not in {normalize_match_text(category) for category in metadata.categories}:
+            return None
+        slug = slugify_text(metadata.title)
+        if not slug:
+            return None
+        return f"{self.BASE_URL}/audioknihy/{source_id}-{slug}.html"
 
     def _extract_product_payload(self, tree: HTMLParser) -> dict[str, object] | None:
         node = tree.css_first(self._selectors.detail_json_ld)
