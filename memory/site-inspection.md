@@ -278,6 +278,13 @@ Date: 2026-03-16
 - Because search is global storefront search, exact title queries perform best and reduce noise from print books, ebooks, and other media.
 - Detail pages provide reliable description, cover, publisher-like manufacturer, language, and publish-year data, but duration is not consistently exposed on the inspected page, so the scraper leaves it unset when absent.
 
+## 2026-07-07 smoke fix note
+
+- Live search for `Šikmý kostel` still returns the expected audiobook product `513791`; the smoke-test book was not removed.
+- Result cards still render under `#product_list > li.ajax_block_product`, but title links now render as `a.product-name[title]` instead of only `h2 a[title]`.
+- Cover images now render under `.img-wrapper img` on the inspected search cards.
+- The card `.product-author` block can contain the manufacturer/publisher (`OneHotBook`) for the audiobook card, while the embedded `var gtm` payload still carries the real author (`Karin Lednická`) and manufacturer separately. Prefer GTM author metadata when present.
+
 # Naposlech Site Inspection
 
 Date: 2026-03-16

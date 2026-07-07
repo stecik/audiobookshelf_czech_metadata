@@ -45,6 +45,38 @@ def test_parse_search_results_fixture_extracts_audiobook_hits_only() -> None:
     assert "3210426" not in [result.source_id for result in results]
 
 
+def test_parse_search_results_accepts_current_product_name_card_markup() -> None:
+    html = """
+    <script>
+    var gtm = {"events":{"GTM":{"viewItemList":{"products":[
+      {"id":513791,"category":[{"name":"Knihy"},{"name":"Audioknihy"}],"author":["Karin Lednická"],"manufacturer":"OneHotBook"}
+    ]}}}};
+    </script>
+    <ul id="product_list">
+      <li class="ajax_block_product">
+        <div class="ribbons"><div class="ribbon cd">CD / DVD</div></div>
+        <div class="add-to-library" data-product-id="513791"></div>
+        <div class="img-wrapper">
+          <a href="https://www.megaknihy.cz/audioknihy/513791-sikmy-kostel.html?search_pos=4" title="Šikmý kostel">
+            <img src="https://img-cloud.megaknihy.cz/513791-large/sikmy-kostel.jpg" alt="Šikmý kostel">
+          </a>
+        </div>
+        <a href="https://www.megaknihy.cz/audioknihy/513791-sikmy-kostel.html?search_pos=4" title="Šikmý kostel" class="product-name">Šikmý kostel</a>
+        <div class="product-author"><a href="/2963_onehotbook">OneHotBook</a></div>
+      </li>
+    </ul>
+    """
+
+    results = build_scraper().parse_search_results(html)
+
+    assert len(results) == 1
+    assert results[0].source_id == "513791"
+    assert results[0].title == "Šikmý kostel"
+    assert results[0].authors == ["Karin Lednická"]
+    assert results[0].publishers == ["OneHotBook"]
+    assert results[0].cover_url == "https://img-cloud.megaknihy.cz/513791-large/sikmy-kostel.jpg"
+
+
 def test_parse_detail_page_fixture_extracts_enriched_metadata() -> None:
     search_html = (FIXTURES_DIR / "megaknihy_search_sikmy_kostel.html").read_text(encoding="utf-8")
     detail_html = (FIXTURES_DIR / "megaknihy_detail_sikmy_kostel.html").read_text(encoding="utf-8")

@@ -24,9 +24,9 @@ from app.utils.text import (
 @dataclass(frozen=True)
 class MegaknihySelectors:
     search_result_items: str = "#product_list > li.ajax_block_product"
-    search_title_link: str = "h2 a[title]"
+    search_title_link: str = "h2 a[title], a.product-name[title]"
     search_author_nodes: str = ".product-author"
-    search_cover: str = ".image-block img"
+    search_cover: str = ".image-block img, .img-wrapper img"
     search_ribbons: str = ".ribbons .ribbon"
     search_source_id: str = ".add-to-library"
     detail_author_links: str = ".product-author a[itemprop='author'], .product-author [itemprop='author']"
@@ -132,9 +132,9 @@ class MegaknihyScraper(BaseMetadataScraper):
                 continue
 
             cleaned_title = self._clean_title(raw_title)
-            authors = self._people_from_values(self._texts(item.css(self._selectors.search_author_nodes)))
-            if not authors and metadata is not None:
-                authors = metadata.authors
+            authors = metadata.authors if metadata is not None else []
+            if not authors:
+                authors = self._people_from_values(self._texts(item.css(self._selectors.search_author_nodes)))
 
             publishers = [metadata.publisher] if metadata and metadata.publisher else []
             genres = self._filter_search_categories(metadata.categories if metadata else [])
