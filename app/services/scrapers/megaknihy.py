@@ -109,12 +109,23 @@ class MegaknihyScraper(BaseMetadataScraper):
 
     async def search(self, query: str, author: str | None = None) -> list[SourceBook]:
         del author
+        search_query = normalize_whitespace(query) or ""
+        results = await self._search_once(search_query)
+        if results:
+            return results
+
+        fallback_query = normalize_match_text(search_query)
+        if fallback_query and fallback_query != search_query:
+            return await self._search_once(fallback_query)
+        return results
+
+    async def _search_once(self, query: str) -> list[SourceBook]:
         html = await self._http_client.get_text(
             self.SEARCH_URL,
             params={
                 "orderby": "position",
                 "orderway": "desc",
-                "search_query": normalize_whitespace(query) or "",
+                "search_query": query,
             },
             extra_headers=self.REQUEST_HEADERS,
         )

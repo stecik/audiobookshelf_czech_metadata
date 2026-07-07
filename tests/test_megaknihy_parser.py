@@ -16,16 +16,27 @@ class DummyHttpClient:
 
 
 class RecordingHttpClient:
-    def __init__(self) -> None:
+    def __init__(self, responses: list[str] | None = None) -> None:
+        self._responses = responses or [""]
         self.last_url: str | None = None
         self.last_params: dict[str, Any] | None = None
         self.last_extra_headers: dict[str, str] | None = None
+        self.calls: list[dict[str, Any]] = []
 
     async def get_text(self, url: str, *args, **kwargs) -> str:
         self.last_url = url
         self.last_params = kwargs.get("params")
         self.last_extra_headers = kwargs.get("extra_headers")
-        return ""
+        self.calls.append(
+            {
+                "url": url,
+                "params": self.last_params,
+                "extra_headers": self.last_extra_headers,
+            }
+        )
+        if len(self.calls) <= len(self._responses):
+            return self._responses[len(self.calls) - 1]
+        return self._responses[-1]
 
 
 def build_scraper() -> MegaknihyScraper:
@@ -128,12 +139,13 @@ def test_parse_detail_page_fixture_extracts_enriched_metadata() -> None:
 
 
 def test_search_uses_title_only_for_upstream_query_when_author_is_provided() -> None:
-    http_client = RecordingHttpClient()
+    html = (FIXTURES_DIR / "megaknihy_search_sikmy_kostel.html").read_text(encoding="utf-8")
+    http_client = RecordingHttpClient(responses=[html])
     scraper = MegaknihyScraper(http_client=http_client)  # type: ignore[arg-type]
 
     results = asyncio.run(scraper.search(query="  Šikmý   kostel ", author="Karin Lednická"))
 
-    assert results == []
+    assert results
     assert http_client.last_url == scraper.SEARCH_URL
     assert http_client.last_params == {
         "orderby": "position",
@@ -142,3 +154,23 @@ def test_search_uses_title_only_for_upstream_query_when_author_is_provided() -> 
     }
     assert http_client.last_extra_headers is not None
     assert http_client.last_extra_headers["User-Agent"].startswith("Mozilla/5.0")
+
+
+def test_search_retries_with_ascii_query_when_exact_query_returns_no_results() -> None:
+    fallback_html = """
+    <script>
+    var gtm = {"events":{"GTM":{"viewItemList":{"products":[
+      {"name":"Šikmý kostel","id":513791,"category":[{"name":"Knihy"},{"name":"Audioknihy"}],"author":["Karin Lednická"],"manufacturer":"OneHotBook"}
+    ]}}}};
+    </script>
+    """
+    http_client = RecordingHttpClient(responses=["", fallback_html])
+    scraper = MegaknihyScraper(http_client=http_client)  # type: ignore[arg-type]
+
+    results = asyncio.run(scraper.search(query="Šikmý kostel"))
+
+    assert [call["params"]["search_query"] for call in http_client.calls] == [
+        "Šikmý kostel",
+        "sikmy kostel",
+    ]
+    assert [result.source_id for result in results] == ["513791"]
