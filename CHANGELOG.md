@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v1.0.5] - 2026-09-24
 
 ### Fixed
 
+- Megaknihy: updated search markup parsing, analytics payload fallback, browser-like request headers and retry without diacritics
 - ProgresGuru: switch to the new `api.progresguru.cz/api/v1` JSON API (old `progresguru.cz/api/audiobooks` returns 404)
 - Smoke checks: Audiolibrix and Megaknihy are soft checks (single attempt, reported as WARN, non-blocking) because GitHub-hosted runner IPs get rejected upstream
 - Smoke checks: send `AUTHORIZATION` header when `AUDIOBOOKSHELF_AUTH_TOKEN` is set
