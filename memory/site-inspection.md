@@ -504,3 +504,8 @@ Date: 2026-03-19
 
 - Databaze knih is not an audiobook storefront. It is best treated as a metadata fallback source for custom audiobooks that have no official audiobook listing.
 - Because the site is books-only, the source defaults to disabled in global `/search` but remains available through `/databazeknih/search`.
+
+## 2026-09-24 scheduled monitor failures
+
+- ProgresGuru storefront rewritten to Nuxt; old `https://progresguru.cz/api/audiobooks` returns 404. New API host `https://api.progresguru.cz/api/v1/audiobooks?search=...&page=1` (same `audiobooks`/`last_valid_page`/`total` payload), detail `/api/v1/audiobooks/<slug>` (same `audiobook` object). Also `POST /api/v1/audiobooks/list/search {"search": ...}` exists (autocomplete). Fixed.
+- Audiolibrix (502) and Megaknihy (0 matches) fail only on GitHub-hosted runners; both pass locally with identical UA/config. Audiolibrix drops connections for non-browser UAs; likely IP/WAF block of datacenter ranges. Not reproducible locally.

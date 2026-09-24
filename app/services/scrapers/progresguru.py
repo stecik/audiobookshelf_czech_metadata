@@ -23,7 +23,8 @@ class ProgresGuruScraper(BaseMetadataScraper):
     source_name = "progresguru"
 
     BASE_URL = "https://progresguru.cz"
-    SEARCH_URL = f"{BASE_URL}/api/audiobooks"
+    API_BASE_URL = "https://api.progresguru.cz"
+    SEARCH_URL = f"{API_BASE_URL}/api/v1/audiobooks"
     DETAIL_URL_TEMPLATE = f"{SEARCH_URL}/{{slug}}"
     DETAIL_PAGE_URL_TEMPLATE = f"{BASE_URL}/audioknihy/{{slug}}"
 

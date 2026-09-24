@@ -6,7 +6,7 @@ import json
 import os
 import sys
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from time import perf_counter
 
@@ -20,6 +20,8 @@ class SearchCheck:
     query: str
     author: str | None
     expected_title: str
+    # Soft checks run once and are reported as WARN; they never fail the workflow.
+    soft_fail: bool = False
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,11 @@ class CheckResult:
     status_code: int | None = None
     match_count: int | None = None
     sample_titles: tuple[str, ...] = ()
+    soft_fail: bool = False
+
+    @property
+    def blocking_failure(self) -> bool:
+        return not self.ok and not self.soft_fail
 
 
 SEARCH_CHECKS: tuple[SearchCheck, ...] = (
@@ -53,12 +60,15 @@ SEARCH_CHECKS: tuple[SearchCheck, ...] = (
         author="Agatha Christie",
         expected_title="Podzimní děsy",
     ),
+    # Audiolibrix and Megaknihy are soft checks: they pass from local/manual clients
+    # but GitHub-hosted runner IPs get rejected upstream (502 / empty results).
     SearchCheck(
         name="audiolibrix search",
         path="/audiolibrix/search",
         query="1984",
         author="George Orwell",
         expected_title="1984",
+        soft_fail=True,
     ),
     SearchCheck(
         name="audioteka search",
@@ -108,6 +118,7 @@ SEARCH_CHECKS: tuple[SearchCheck, ...] = (
         query="Šikmý kostel",
         author="Karin Lednická",
         expected_title="Šikmý kostel",
+        soft_fail=True,
     ),
     SearchCheck(
         name="naposlech search",
@@ -404,7 +415,7 @@ def build_headers() -> dict[str, str]:
     token = os.getenv("AUDIOBOOKSHELF_AUTH_TOKEN", "").strip()
     if not token:
         return {}
-        return {"AUTHORIZATION": token}
+    return {"AUTHORIZATION": token}
 
 
 async def run_with_retries(
@@ -465,7 +476,8 @@ async def run_with_retries(
 
 def render_report(*, base_url: str, results: list[CheckResult]) -> str:
     passed = sum(1 for result in results if result.ok)
-    failed = len(results) - passed
+    failed = sum(1 for result in results if result.blocking_failure)
+    warned = len(results) - passed - failed
 
     lines = [
         "# Scheduled scrape smoke report",
@@ -474,13 +486,14 @@ def render_report(*, base_url: str, results: list[CheckResult]) -> str:
         f"- Total checks: {len(results)}",
         f"- Passed: {passed}",
         f"- Failed: {failed}",
+        f"- Warnings (soft checks, non-blocking): {warned}",
         "",
         "## Results",
         "",
     ]
 
     for result in results:
-        state = "PASS" if result.ok else "FAIL"
+        state = "PASS" if result.ok else "WARN" if result.soft_fail else "FAIL"
         details = [
             f"{state} {result.name}",
             f"path={result.path}",
@@ -497,15 +510,14 @@ def render_report(*, base_url: str, results: list[CheckResult]) -> str:
             lines.append(f"  sample titles: {', '.join(result.sample_titles)}")
         lines.append("")
 
-    failing_results = [result for result in results if not result.ok]
-    if failing_results:
-        lines.extend(
-            [
-                "## Failures",
-                "",
-            ]
-        )
-        for result in failing_results:
+    for heading, section_results in (
+        ("## Failures", [result for result in results if result.blocking_failure]),
+        ("## Warnings", [result for result in results if not result.ok and result.soft_fail]),
+    ):
+        if not section_results:
+            continue
+        lines.extend([heading, ""])
+        for result in section_results:
             lines.append(f"- {result.name}: {result.message}")
         lines.append("")
 
@@ -548,19 +560,18 @@ async def main_async(args: argparse.Namespace) -> int:
             )
         )
         for check in SEARCH_CHECKS:
-            results.append(
-                await run_with_retries(
-                    lambda current_check=check: run_search_check(client, current_check),
-                    retry_attempts=args.retry_attempts,
-                    retry_wait_seconds=args.retry_wait_seconds,
-                )
+            result = await run_with_retries(
+                lambda current_check=check: run_search_check(client, current_check),
+                retry_attempts=1 if check.soft_fail else args.retry_attempts,
+                retry_wait_seconds=args.retry_wait_seconds,
             )
+            results.append(replace(result, soft_fail=check.soft_fail))
 
     Path(args.report_file).write_text(
         render_report(base_url=args.base_url, results=results),
         encoding="utf-8",
     )
-    return 0 if all(result.ok for result in results) else 1
+    return 1 if any(result.blocking_failure for result in results) else 0
 
 
 def main() -> int:

@@ -137,8 +137,8 @@ As of March 16, 2026:
 - O2 Knihovna detail pages expose title, author, genres, duration, narrator, publisher, publish year, language, and description in static HTML. Extra narrator names are only added when the summary text explicitly uses a `Čte ...` sentence.
 - Palmknihy uses `https://www.palmknihy.cz/vyhledavani$a885-search?query=...` and returns server-rendered result cards where audiobook matches can be filtered via `item-type="audiobook"`.
 - Palmknihy detail pages expose publisher, genres, language, duration, and publish year in static HTML. The description block looked inconsistent on at least one live audiobook page, so description enrichment is intentionally conservative for this source.
-- ProgresGuru uses the storefront JSON API at `https://progresguru.cz/api/audiobooks?search=...&page=1`.
-- ProgresGuru detail enrichment uses `https://progresguru.cz/api/audiobooks/<slug>` for subtitle, duration, publisher, full author list, narrator list, description, and publish date.
+- ProgresGuru uses the storefront JSON API at `https://api.progresguru.cz/api/v1/audiobooks?search=...&page=1` (moved from `progresguru.cz/api/audiobooks` in 2026-09 after the Nuxt storefront rewrite).
+- ProgresGuru detail enrichment uses `https://api.progresguru.cz/api/v1/audiobooks/<slug>` for subtitle, duration, publisher, full author list, narrator list, description, and publish date.
 - Radioteka uses `https://www.radioteka.cz/hledani?q=...` and returns server-rendered search sections grouped by content type.
 - Radioteka audiobook matches can be isolated via `data-provider="croslovo"`, and detail pages expose author, narrator, publisher, year, duration, and description in static HTML.
 - Rozhlas uses the public topic page `https://temata.rozhlas.cz/hry-a-cetba` with GET filtering via the `combine` parameter.
